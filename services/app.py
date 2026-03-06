@@ -5,6 +5,7 @@ from pathlib import Path
 from flask import Flask, send_from_directory, jsonify, render_template, abort
 from werkzeug.middleware.proxy_fix import ProxyFix
 from dotenv import load_dotenv
+from flask import redirect, url_for
 
 # ---------- 路徑 ----------
 SERV = Path(__file__).resolve().parent
@@ -16,7 +17,6 @@ USER_DIR = SERV_TPL / "USER"
 # ---------- 載入環境變數 ----------
 load_dotenv(dotenv_path=ROOT / ".env")
 
-
 # ---------- sys.path ----------
 for pth in (SERV, ROOT, SERV / "ai"):
     s_ = str(pth)
@@ -25,12 +25,14 @@ for pth in (SERV, ROOT, SERV / "ai"):
 
 # ---------- 建立 Flask ----------
 app = Flask(__name__, template_folder=str(SERV_TPL), static_folder=str(SERV_STATIC))
-app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "main-secret-key-456")
-app.config["SESSION_COOKIE_NAME"] = "star_main_session"
-app.config["SESSION_COOKIE_SECURE"] = True         # ✅ MAIN 維持 HTTPS Secure
+app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "dev-secret-key-123")
+app.config["SESSION_COOKIE_NAME"] = "star_dev_session"
+app.config["SESSION_COOKIE_SECURE"] = False        
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
-app.config["PREFERRED_URL_SCHEME"] = "https"
+app.config["PREFERRED_URL_SCHEME"] = "http"
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
+app.config['TEMPLATES_AUTO_RELOAD'] = True
+app.jinja_env.cache = {}
 
 # ===================== 初始化核心套件 =====================
 from auth import db, mail, migrate
@@ -59,13 +61,12 @@ from services.quiz.quiz import bp as quiz_bp
 from services.quiz.learn import learn_bp
 from services.game.routes import bp as game_bp
 from services.teach.routes import bp as teach_bp
-app.register_blueprint(teach_bp, url_prefix="/teach")
 app.register_blueprint(game_bp)
 app.register_blueprint(learn_bp)
 app.register_blueprint(auth_bp,  url_prefix="/auth")
 app.register_blueprint(admin_bp, url_prefix="/admin")
 app.register_blueprint(quiz_bp,  url_prefix="/quiz")
-
+app.register_blueprint(teach_bp, url_prefix="/teach")
 # --- ensure /ai/custom blueprint is mounted ---
 try:
     # 把 import 放在 try 裡：任何錯誤都不要在 module import 階段炸掉
@@ -90,6 +91,7 @@ except Exception as e:
 
 
 # ===================== 相容路由 =====================
+
 @app.post("/api/register")
 def compat_register():
     return _api_register()
@@ -115,6 +117,14 @@ def no_cache(resp):
     resp.headers["Pragma"] = "no-cache"
     resp.headers["Expires"] = "0"
     return resp
+@app.get("/auth/api/_dev_cfg")
+def _dev_cfg():
+    from flask import current_app
+    return {
+        "cookie_name": current_app.config.get("SESSION_COOKIE_NAME"),
+        "cookie_secure": current_app.config.get("SESSION_COOKIE_SECURE"),
+        "scheme": current_app.config.get("PREFERRED_URL_SCHEME"),
+    }
 
 # ===================== 首頁 & 靜態 =====================
 @app.get("/")
@@ -172,6 +182,12 @@ with app.app_context():
         app.logger.error("[auth] ensure_default_admin failed: %s", e)
 
 if __name__ == "__main__":
-    port = int(os.getenv("WEB_PORT", "18361"))
-    print("[i] mounted blueprints: /auth , /admin , /quiz , /ai(custom, ai)")
+    port = int(os.getenv("WEB_PORT", "18360"))
+    print("[i] mounted blueprints: /auth , /admin , /quiz , /ai(optional)")
     app.run(host="0.0.0.0", port=port, debug=False)
+try:
+    from jinja2 import TemplateNotFound
+    # 只測一次，立即發現路徑或大小寫問題
+    app.jinja_env.get_or_select_template("USER/User_Home.html")
+except Exception as e:
+    app.logger.error("[boot] 找不到模板 USER/User_Home.html 或模板語法錯誤: %s", e)
