@@ -1,32 +1,33 @@
 #!/bin/bash
-# === 啟動 main 服務（對應 HTTPS :443 / 5009 Port）===
+
+# 1. 強制進入目錄
 cd /workspaces/main
 
-# 確保虛擬環境啟動
-if [ -d ".venv" ]; then
-    source .venv/bin/activate
-else
-    echo "錯誤: 找不到 .venv 目錄！"
-    exit 1
-fi
+echo "=== [PROD] 正式站重啟 (Port: 5009) ==="
 
-# 確保 log 存放目錄存在 (需要 sudo 權限)
-sudo mkdir -p /var/log/gunicorn/
-sudo chown -R $USER:$USER /var/log/gunicorn/
+# 2. 停掉舊的 (改用 Port 號來殺，更精準，不會誤殺自己)
+sudo fuser -k 5009/tcp || true
+sudo pkill -9 -f "gunicorn.*5009" || true
+sleep 1
 
-echo "正在關閉舊的 Gunicorn 行程..."
-sudo pkill -f "gunicorn.*main" || true
+# 3. 確保 Log 權限
+sudo mkdir -p /var/log/gunicorn
+sudo chmod 777 /var/log/gunicorn
 
-echo "正在以 Production 模式啟動 Gunicorn..."
+# 4. 關鍵：進入虛擬環境，並直接用 gunicorn 指令 (跟妳手動一模一樣)
+source /workspaces/main/.venv/bin/activate
+
+# 5. 執行妳「手動成功」的那串指令
 gunicorn -w 4 -k gthread \
   -b 127.0.0.1:5009 \
   --timeout 300 \
   --chdir /workspaces/main \
   --pid /tmp/guni-prod.pid \
   --access-logfile /var/log/gunicorn/prod.access.log \
-  --error-logfile  /var/log/gunicorn/prod.error.log \
+  --error-logfile /var/log/gunicorn/prod.error.log \
   services.app:app -D
 
-echo "Gunicorn 啟動腳本執行完畢！以下是 5009 Port 的監聽狀態："
+# 6. 驗證
+echo "等待啟動檢查..."
+sleep 3
 ss -ltnp | grep 5009
-
