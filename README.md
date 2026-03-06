@@ -1,6 +1,6 @@
 # 🌟 StarStar - 自閉症兒童的情緒辨識訓練系統
 
-「**自閉症兒童的情緒辨識訓練系統 (Emotion Recognition Training System)**」是一個專為自閉症孩童設計的網頁應用程式。本系統結合豐富的互動式前端介面與強大的後端人工智慧 (AI) 模型，透過情緒教學、互動遊戲、以及即時臉部情緒辨識測驗，協助孩童認識、理解並學習表達各種情緒。
+「**自閉症兒童的情緒辨識訓練系統 (Emotion Recognition Training System)**」是一個專為自閉症孩童設計的網頁應用程式。本系統結合豐富的互動式前端介面與後端人工智慧 (AI) 模型，透過情緒教學、互動遊戲、以及即時臉部情緒辨識測驗，協助孩童認識、理解並學習表達各種情緒。
 
 ---
 
@@ -8,13 +8,18 @@
 
 系統將核心功能劃分多個子模組（Blueprint），提供完整的學習與管理體驗：
 
-- **📚 教學模組 (`teach`, `learn`)**：提供漸進式的情緒認知教學內容（如：`Teach.html`、`Learningprocess.html`），以圖文及互動方式引導幼童學習基本情緒。
+- **📚 教學模組 (`teach`, `learn`)**：提供漸進式的情緒認知教學內容（如：`Teach.html`、`Learningprocess.html`），以圖文及互動方式引導幼童學習基本情緒。`learn` 藍圖位於 `services/quiz/learn.py`。
 - **🎮 遊戲與測驗模組 (`game`, `quiz`)**：
-  - 內建 10 種互動式的情緒辨識遊戲模組（包含記憶翻牌、射擊、堆疊遊戲等），增加學習趣味性 (`Play.html`)。
+  - 內建互動式的情緒辨識遊戲模組（包含記憶翻牌、射擊、堆疊遊戲等），增加學習趣味性 (`Play.html`)。
   - 多樣化的測驗評估機制 (`Quiz.html`, `Quiz_list.html`)，並整合 **OpenAI API (GPT-4o-mini)** 針對孩童答題狀況產出溫暖、動態的專屬回饋語，同步追蹤長期與短期的學習雷達圖進度。
-- **🤖 AI 臉部辨識擴充 (`ai`, `ai/custom`)**：整合 FER (表情辨識)、MediaPipe (人臉快速偵測) 與 TensorFlow，提供靜態與動態影像的即時情緒分析（如：判斷開心、生氣等情緒）。此外，支援使用者自訂擴充題庫，並內建 FFmpeg 處理動圖與影片的裁切轉檔 (`Add_Question.html`, `Customize.html`)。
-- **🔐 身份驗證與安全 (`auth`)**：提供安全的註冊、登入機制。採用 **Werkzeug Security** 動態密碼雜湊（相容 PBKDF2 / Scrypt / Bcrypt自動升級）與信箱 **OTP (One-time Password) 註冊驗證**，並具備密碼重設與 Session 保護機制。
-- **🛠 後台管理 (`admin`)**：系統管理員專屬的後台，用於管理使用者帳號及系統資源。
+- **🤖 AI 臉部辨識擴充 (`ai`, `ai/custom`)**：
+  - **核心辨識**: 整合 FER (表情辨識) 與 **MediaPipe** (高效人臉偵測)，針對 6 大核心情緒（生氣、厭惡、害怕、開心、難過、驚訝）提供分析。
+  - **多幀動態分析**: 支援靜態圖與 **GIF/WebP 動圖**，系統會自動等距抽樣多個候選幀，並透過信心值與情緒修正規則（如判斷 fear/sad 權重調整）篩選最佳結果。
+  - **自動化題幹生成**: 內建童言短句生成器 (`utils_text.py`)，能根據情緒類別與媒體類型自動產出適合幼童的互動問題。
+  - **自訂擴充**: 支援使用者自訂題庫，並整合 FFmpeg 處理影像裁切與轉檔 (`Add_Question.html`, `Customize.html`)。
+- **🔐 身份驗證與安全 (`auth`, `admin`)**：
+  - **auth**: 提供安全的註冊、登入機制。採用 **Werkzeug Security** 動態密碼雜湊與信箱 **OTP 註冊驗證**。
+  - **admin**: 系統管理員專屬的後台路徑 `/admin`，其實作位於 `services/auth/admin_routes.py`。
 
 ---
 
@@ -24,16 +29,16 @@
 
 ### Backend (後端程式)
 - **核心框架**: [Flask](https://flask.palletsprojects.com/) 3.0
-- **資料庫與 ORM**: MySQL、[SQLAlchemy](https://www.sqlalchemy.org/) 2.0、Alembic（用於資料庫遷移 `Migration`）
+- **資料庫與 ORM**: MySQL、[SQLAlchemy](https://www.sqlalchemy.org/) 2.0、Alembic
 - **伺服器**: Gunicorn (WSGI 佈署)
-- **安全性與防護**: Werkzeug Security 密碼雜湊機制 (具備舊版 bcrypt 自動升級 pbkdf2/scrypt 功能)、Flask-Limiter (請求頻率限制)、Flask-Mail (信件驗證) 與信箱 OTP 註冊驗證。
+- **安全性**: Werkzeug Security, Flask-Limiter, Flask-Mail (信箱 OTP 驗證)。
 
 ### AI & Machine Learning (人工智慧與機器學習)
-- **語言模型互動 (LLM)**: OpenAI API (`gpt-4o-mini`) 動態生成幼兒鼓勵回饋語
-- **臉部特徵與情緒偵測**: FER (Facial Expression Recognition), [MediaPipe](https://github.com/google/mediapipe) (人臉偵測)
-- **深度學習與處理框架**: TensorFlow 2.10.1 (Keras), Numpy, Pandas
-- **影像與電腦視覺**: [DeepFace](https://github.com/serengil/deepface) 0.0.83 (相容性保留), OpenCV (Headless) 影像處理, Pillow (PIL 圖像增強與動圖抽幀)
-- **多媒體影音處理**: FFmpeg (透過 `subprocess` 進行視訊及動圖的裁切、縮放與轉檔)
+- **語言模型 (LLM)**: OpenAI API (`gpt-4o-mini`) 動態生成幼兒鼓勵回饋語。
+- **特徵偵測**: **MediaPipe** (Face Detection), **FER** (Facial Expression Recognition)。
+- **深度學習框架**: **TensorFlow 2.10.1 (Keras)**, Numpy (1.23.5), Pandas (1.5.3)。
+- **影像與電腦視覺**: OpenCV (Headless) 影像處理, **Pillow** (PIL 圖像增強與動圖抽幀), **imageio**。
+- **多媒體處理**: **FFmpeg** (透過 `subprocess` 或 `moviepy` 進行裁切與轉檔)。
 
 ### Frontend (前端介面)
 - **模板引擎**: Jinja2 (Flask 內建)
@@ -47,16 +52,22 @@
 /workspaces/main/
 ├── services/                 # 後端應用程式碼根目錄
 │   ├── app.py                # 系統進入點 (主程式)
-│   ├── auth/                 # 身份驗證模組 (Login, Register, OTP)
-│   ├── admin/                # （後端藍圖）後台管理模組
-│   ├── quiz/、game/、teach/   # （後端藍圖）評量、遊戲與教學核心模組
-│   ├── ai/                   # （後端藍圖）AI 情緒與臉部辨識模組
-│   ├── static/               # 前端靜態資源 (CSS, JS, 圖片, Favicon)
-│   └── templates/            # 前端網頁 HTML 模板 (如 index.html, user_home 等)
-├── .env.example              # 環境變數設定範例
-├── requirements.txt          # Web 核心功能依賴清單
-├── requirements-ai.txt       # AI 辨識依賴清單
-└── start_main.sh             # 系統啟動腳本 (Gunicorn Daemon)
+│   ├── auth/                 # 身份驗證與後台管理模組
+│   │   ├── routes.py         # 註冊、登入與 OTP
+│   │   └── admin_routes.py   # 後台管理路由 (/admin)
+│   ├── quiz/                 # 評量與學習歷程模組
+│   ├── game/                 # 遊戲邏輯模組
+│   ├── teach/                # 教學內容模組
+│   ├── ai/                   # AI 情緒辨識核心模組
+│   │   ├── predict_emotion.py # 核心辨識算法 (Multi-frame Logic)
+│   │   ├── utils_text.py     # 自動化童言題幹生成
+│   │   ├── routes.py         # 系統預設 AI 路由 (/ai)
+│   │   └── custom/           # 使用者自訂題庫模組 (/ai/custom)
+│   ├── static/               # 前端靜態資源
+│   └── templates/            # 前端網頁模板
+├── requirements.txt          # Web 核心依賴
+├── requirements-ai.txt       # AI 辨識依賴 (TensorFlow, FER, etc.)
+└── start_main.sh             # 系統啟動腳本
 ```
 
 ---
