@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>打地鼠</title>
+  <style>
+    :root{ --back-top:16px; --back-left:16px; }
+
+    body{margin:0;background:#0b1020;color:#e5e7eb;font-family:system-ui,"Noto Sans TC",sans-serif;display:grid;place-items:center;min-height:100vh}
+
+    /* 通用返回鈕 */
+    #back-button{
+      position: fixed;
+      top: calc(env(safe-area-inset-top, 0px) + var(--back-top));
+      left: calc(env(safe-area-inset-left, 0px) + var(--back-left));
+      z-index: 10000;
+      display:inline-flex;align-items:center;gap:8px;
+      font-size:16px;line-height:1;
+      color:#f9fafb;
+      background: rgba(17,24,39,.6);
+      padding:10px 16px;border-radius:24px;text-decoration:none;
+      box-shadow: 0 4px 12px rgba(0,0,0,.35);
+      transition: background-color .2s, transform .06s ease-in-out;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    #back-button:hover{ background: rgba(17,24,39,.75); }
+    #back-button:active{ transform: scale(.98); }
+
+    .wrap{width:min(92vw,560px)}
+    h1{text-align:center;margin:.6rem 0}
+    .hud{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;align-items:center}
+    .pill{background:#111827;border-radius:12px;padding:8px 10px;text-align:center}
+    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}
+    .cell{background:#111827;border-radius:14px;aspect-ratio:1/1;display:grid;place-items:center;font-size:44px;cursor:pointer;transition:transform .1s, filter .1s}
+    .cell.on{background:#1f2937}
+    .panel{display:flex;gap:8px;justify-content:center;margin-top:12px;flex-wrap:wrap}
+    button,select{padding:10px 14px;border-radius:10px;border:none;cursor:pointer;font-weight:700}
+    .muted{opacity:.6}
+  </style>
+</head>
+<body data-logout-url="{{ url_for('auth.logout') }}">
+  <script src="{{ url_for('static', filename='js/parent_timer.js') }}?v=20251025-6"></script>
+  <!-- 返回首頁 -->
+  <a href="{{ url_for('auth.home') }}" id="back-button" aria-label="返回首頁">← 返回首頁</a>
+
+  <div class="wrap">
+    <h1>打地鼠</h1>
+    <div class="hud">
+      <div class="pill">分數：<span id="score">0</span>（連擊 <span id="combo">0</span>x）</div>
+      <div class="pill">剩餘：<span id="time">30</span>s</div>
+      <div class="pill">
+        速度：
+        <select id="speed">
+          <option value="1200">悠閒</option>
+          <option value="900" selected>普通</option>
+          <option value="700">快速</option>
+          <option value="550">超快</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="grid" class="grid"></div>
+
+    <div class="panel">
+      <button id="start">開始</button>
+      <button id="stop">停止</button>
+      <button id="mute" class="muted">🔈 音效</button>
+    </div>
+  </div>
+  <!-- 全站倒數提醒容器（60s / 30s / 5s 用） -->
+<div id="sysCenterWarn" class="sysset-center-warn" aria-hidden="true">
+  <div class="sysset-center-box" id="sysCenterWarnBox"></div>
+</div>
+  <script>
+    // —— 返回邏輯 + 自動避位 —— //
+    (function(){
+      const backBtn = document.getElementById('back-button');
+      backBtn.addEventListener('click', function(e){
+        try{
+          const ref = document.referrer;
+          if(ref){
+            const r = new URL(ref);
+            if(r.origin === location.origin){
+              e.preventDefault();
+              history.back();
+              return;
+            }
+          }
+        }catch(_e){}
+      });
+
+      function avoidOverlap(){
+        document.documentElement.style.setProperty('--back-left','16px');
+        document.documentElement.style.setProperty('--back-top','16px');
+        const rect = backBtn.getBoundingClientRect();
+        let step = 8, shifted = 0, maxShift = 200;
+
+        function covered(){
+          const pts = [
+            [rect.left + 4, rect.top + 4],
+            [rect.left + rect.width/2, rect.top + rect.height/2]
+          ];
+          return pts.some(([x,y])=>{
+            const el = document.elementFromPoint(x,y);
+            return el && el !== backBtn && !backBtn.contains(el) && el !== document.body && el !== document.documentElement;
+          });
+        }
+        while(covered() && shifted <= maxShift){
+          shifted += step;
+          document.documentElement.style.setProperty('--back-left', (16 + shifted) + 'px');
+          const r2 = backBtn.getBoundingClientRect();
+          rect.left = r2.left; rect.top = r2.top; rect.width = r2.width; rect.height = r2.height;
+        }
+      }
+      window.addEventListener('load', ()=> setTimeout(avoidOverlap, 0));
+      window.addEventListener('resize', ()=> setTimeout(avoidOverlap, 0));
+    })();
+
+    // --- DOM & 狀態 ---
+    const grid=document.getElementById('grid');
+    const scoreEl=document.getElementById('score');
+    const comboEl=document.getElementById('combo');
+    const timeEl=document.getElementById('time');
+    const btnStart=document.getElementById('start');
+    const btnStop=document.getElementById('stop');
+    const btnMute=document.getElementById('mute');
+    const selSpeed=document.getElementById('speed');
+
+    let cells=[], timer=null, ticker=null, active=-1, playing=false;
+    let score=0, combo=0, secs=30, baseInterval=+selSpeed.value;
+
+    // --- 簡易 WebAudio 音效（不載檔案、純程式合成） ---
+    let ctx=null, muted=true, unlocked=false;
+    function unlockAudio(){ if(!ctx){ ctx=new (window.AudioContext||window.webkitAudioContext)(); } if(ctx.state==='suspended'){ ctx.resume(); } unlocked=true; }
+    function beep(freq=660, dur=0.09, type='sine', gain=0.05){
+      if(muted||!ctx) return; const t=ctx.currentTime; const osc=ctx.createOscillator(); const g=ctx.createGain();
+      osc.type=type; osc.frequency.value=freq; g.gain.setValueAtTime(gain,t); g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+      osc.connect(g).connect(ctx.destination); osc.start(t); osc.stop(t+dur);
+    }
+    function hitSnd(){ beep(880,0.08,'square',0.06); }
+    function missSnd(){ beep(220,0.12,'sawtooth',0.04); }
+    function tickSnd(){ beep(520,0.06,'triangle',0.035); }
+
+    // --- 遊戲邏輯 ---
+    function build(){
+      grid.innerHTML=''; cells=[];
+      for(let i=0;i<9;i++){
+        const c=document.createElement('div'); c.className='cell'; c.textContent='🕳️'; grid.appendChild(c); cells.push(c);
+      }
+      cells.forEach((c,i)=>{
+        c.onclick=()=>{
+          if(!playing) return;
+          if(i===active){ onHit(c); } else { onMiss(c); }
+        };
+      });
+    }
+
+    function show(){
+      cells.forEach(c=>{ c.classList.remove('on'); c.textContent='🕳️'; });
+      active=Math.floor(Math.random()*9);
+      cells[active].classList.add('on');
+      cells[active].textContent='🐹';
+    }
+    function hide(){ if(active>=0){ cells[active].classList.remove('on'); cells[active].textContent='🕳️'; active=-1; } }
+
+    function loop(){
+      hide(); show();
+      const jitter = (Math.random()*200)-100;
+      timer=setTimeout(loop, Math.max(350, baseInterval + jitter));
+    }
+
+    function start(){
+      if(playing) return;
+      unlockAudio();
+      playing=true; score=0; combo=0; secs=30; baseInterval=+selSpeed.value; updateHUD();
+      loop();
+      ticker=setInterval(()=>{
+        secs--; timeEl.textContent=secs;
+        if(secs<=5 && secs>0){ tickSnd(); }
+        if(secs<=0){ stop(); }
+      },1000);
+    }
+
+    function stop(){
+      playing=false; clearTimeout(timer); clearInterval(ticker); hide();
+      grid.animate([{transform:'scale(1)'},{transform:'scale(1.02)'},{transform:'scale(1)'}],{duration:260});
+    }
+
+    function onHit(cell){
+      combo++; score += 10 + Math.max(0,(combo-1))*2; updateHUD();
+      cell.animate([{transform:'scale(1)'},{transform:'scale(1.08)'},{transform:'scale(1)'}],{duration:160});
+      hitSnd();
+      hide();
+    }
+
+    function onMiss(cell){
+      score = Math.max(0, score-3); combo=0; updateHUD();
+      cell.animate([{filter:'brightness(1)'},{filter:'brightness(.7)'},{filter:'brightness(1)'}],{duration:160});
+      missSnd();
+    }
+
+    function updateHUD(){ scoreEl.textContent=score; comboEl.textContent=combo; timeEl.textContent=secs; }
+
+    // --- 事件 ---
+    btnStart.onclick=()=>{ start(); };
+    btnStop.onclick=()=>{ stop(); };
+    selSpeed.onchange=()=>{ baseInterval=+selSpeed.value; };
+    btnMute.onclick=()=>{
+      if(!unlocked) unlockAudio();
+      muted=!muted; btnMute.classList.toggle('muted', muted); btnMute.textContent = muted? '🔇 靜音' : '🔈 音效';
+    };
+
+    // 初始
+    build();
+  </script>
+</body>
+</html>

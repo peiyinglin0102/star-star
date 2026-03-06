@@ -1,0 +1,1462 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+    <head>
+        <meta charset="UTF-8">
+        <title>星星關卡答題</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="icon" href="{{ url_for('static', filename='exit.png') }}">
+        <link rel="apple-touch-icon"
+              href="{{ url_for('static', filename='12.png') }}">
+        <style>
+    body {
+      font-family: "微軟正黑體", sans-serif;
+      margin: 0;
+      background: #fff;
+      background-image:url("{{ url_for('static', filename='12.png') }}");
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-attachment: fixed;
+      overflow-x: hidden;
+      text-align: center;
+      padding-top: 76px;
+    }
+
+    .topbar {
+      display: none !important;
+    }
+
+    body {
+      padding-top: 24px;
+    }
+
+    /* 原本有 topbar 的上邊距，縮小一點讓畫面更集中 */
+
+
+
+
+    /* 一排置中：左=返回，中=max-content(題號)，右=連接硬體 */
+    .progress-row {
+      display: grid;
+      grid-template-columns: 1fr max-content 1fr;
+      /* 左右平均分配空間 */
+      align-items: center;
+      justify-items: center;
+      /* 每個格子內容都置中 */
+      column-gap: 12px;
+      margin: 8px auto 12px;
+      width: min(92vw, 980px);
+      position: relative;
+    }
+
+
+
+
+
+
+
+
+    /* 題號列（維持原本圓點樣式；這裡只做間距與置中） */
+    .progress {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 0;
+      margin: 0;
+    }
+
+
+
+
+    /* 返回按鈕尺寸微調，貼近題號列左側 */
+    .progress-row .exit-icon {
+      border: none;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, .15);
+      cursor: pointer;
+
+
+
+
+    }
+
+    .progress-row .exit-icon img {
+      transition: transform .2s;
+    }
+
+    .progress-row .exit-icon img:hover {
+      transform: scale(1.1);
+    }
+
+
+
+
+    /* 連接硬體貼在題號列右側 */
+    .progress-row .hw-btn {
+      justify-self: start;
+      /* ← 保留這個 */
+      appearance: none;
+      border: none;
+      border-radius: 12px;
+      padding: 8px 14px;
+      font-size: 15px;
+      cursor: pointer;
+      background: #ffffff;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, .20);
+      white-space: nowrap;
+    }
+
+
+
+
+    .hw-btn.connected {
+      background: #d2f8d2;
+    }
+
+
+
+
+    /* 讓整排真的置中 & 左右貼齊 */
+    .progress-row {
+      display: grid;
+      grid-template-columns: 1fr max-content 1fr;
+      align-items: center;
+      justify-items: center;
+      column-gap: 12px;
+      margin: 8px auto 12px;
+      width: min(92vw, 980px);
+    }
+
+    .progress-row .exit-icon {
+      justify-self: end;
+    }
+
+    .progress-row .hw-btn {
+      justify-self: start;
+    }
+
+
+
+
+    /* 返回鍵加大（外觀依你主題，這裡只放大不加外框） */
+    /* 位置仍在題號列最左邊 */
+    .progress-row .exit-icon {
+      justify-self: end;
+      background: transparent !important;
+      border: none !important;
+      box-shadow: none !important;
+      padding: 0 !important;
+      cursor: pointer;
+    }
+
+
+
+
+    /* 圖片維持原本 40x40，只有 hover 放大 */
+    .progress-row .exit-icon img {
+      width: 60px;
+      height: 60px;
+      transition: transform .2s;
+    }
+
+    .progress-row .exit-icon img:hover {
+      transform: scale(1.1);
+    }
+
+
+
+
+    @media (max-width:768px) {
+      .progress-row .exit-icon img {
+        width: 38px;
+        height: 38px;
+      }
+    }
+
+    /* 讓整個題目區置中並限制寬度 */
+    .progress {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin: 10px auto 12px;
+      flex-wrap: wrap;
+      max-width: 1024px;
+      padding: 0 16px;
+    }
+
+    .dot {
+      width: 44px;
+      height: 44px;
+      line-height: 44px;
+      font-size: 20px;
+      border-radius: 50%;
+      background: #eee;
+      color: #333;
+    }
+
+    .dot.active {
+      background: #ffe600;
+      font-weight: bold;
+    }
+
+
+
+
+    .question-box {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 16px 16px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* 清除圖片與影片的灰底/濾鏡/外框，只保留圓角與陰影 */
+    .question-box img,
+    #questionVideo {
+      background: transparent !important;
+      border: none !important;
+      outline: none !important;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, .15);
+      max-width: 90%;
+      /* 避免太寬超出容器 */
+      max-height: min(55vh, 600px);
+      transform-origin: center center;
+      width: var(--media-w, min(64vw, 500px));
+      max-height: var(--media-h, min(48vh, 700px));
+      object-fit: cover;
+      /* 填滿但允許裁切 */
+      object-position: center top;
+      /* 從上方對齊，必要時裁掉下半部 */
+    }
+
+    /* === 若圖片原始寬度太小（低於容器 70%） → 改成 contain，不裁切 === */
+    .question-box img.too-small,
+    #questionVideo.too-small {
+      object-fit: contain;
+      transform: scale(1.05);
+      /* 稍微放大一點避免太小 */
+    }
+
+    .question-box h2 {
+      max-width: 900px;
+      margin: 20px auto 16px;
+      /* ↑ 原本 8px → 改 20px，往下移一點 */
+      font-size: clamp(20px, 2.4vw, 30px);
+      line-height: 1.4;
+    }
+
+
+
+
+    .options {
+      display: flex;
+      justify-content: center;
+      gap: clamp(16px, 4vw, 40px);
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+
+    .option-btn {
+      padding: clamp(14px, 2.5vw, 20px) clamp(24px, 5vw, 40px);
+      font-size: clamp(18px, 2.2vw, 24px);
+      color: #fff;
+      background: #ff6666;
+      border: none;
+      border-radius: 16px;
+      cursor: pointer;
+      min-width: 150px;
+      transition: transform .08s ease, opacity .2s ease;
+    }
+
+    .option-btn:active {
+      transform: scale(.96)
+    }
+
+    .option-btn[disabled] {
+      opacity: .6;
+      cursor: not-allowed
+    }
+
+
+
+
+    .feedback {
+      margin-top: 18px;
+      font-weight: bold;
+      font-size: 20px;
+      color: #444;
+      min-height: 1.2em;
+    }
+
+
+
+
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, .5);
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+    }
+
+    .modal-content {
+      background: #fff;
+      padding: 30px 40px;
+      border-radius: 10px;
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, .25);
+    }
+
+    .modal-content button {
+      margin: 10px 15px;
+      font-size: 20px;
+      padding: 12px 24px;
+      border-radius: 20px;
+      border: none;
+      cursor: pointer;
+    }
+
+    .btn-yes {
+      background: #ffe600
+    }
+
+    .btn-no {
+      background: #f66;
+      color: #fff
+    }
+
+
+
+
+    /* finish box */
+    .finish-box {
+      max-width: 640px;
+      margin: 18px auto;
+      padding: 20px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.95);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, .12);
+      display: none;
+    }
+
+    .finish-title {
+      font-size: 20px;
+      margin-bottom: 12px;
+      color: #333;
+    }
+
+    .home-btn {
+      font-size: 18px;
+      padding: 10px 18px;
+      border-radius: 12px;
+      border: none;
+      background: #00aaff;
+      color: #fff;
+      cursor: pointer;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, .12);
+    }
+
+    .option-btn .opt-ic {
+      font-size: 1.6em;
+      /* 圈叉大一點 */
+      font-weight: 900;
+      line-height: 1;
+      margin-right: .4em;
+      /* 與文字留距離 */
+      vertical-align: -2px;
+      color: inherit;
+      /* 跟著按鈕字色走（白色） */
+      text-shadow: 0 1px 2px rgba(0, 0, 0, .25);
+      /* 稍微更清楚 */
+    }
+
+
+
+
+    /* 1366×768 或更矮螢幕，讓按鈕也進入首屏 */
+    @media (max-height:740px) {
+      .question-box img {
+        max-height: 38vh;
+      }
+    }
+
+    @media (max-width:768px) {
+      .question-box img {
+        width: min(70vw, 360px)
+      }
+    }
+
+    /* 情境題用的白色圈叉（已經有了 opt-ic） */
+    /* 情緒題用的表情圖示（放大） */
+    .option-btn .emo-ic {
+      font-size: 1.8em;
+      /* 桌機大一點 */
+      line-height: 1;
+      margin-right: .45em;
+      vertical-align: -2px;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, .18);
+      /* 讓淺色背景也清楚 */
+    }
+
+
+
+
+    /* 手機稍微縮小一點避免擠壓 */
+    @media (max-width:768px) {
+      .option-btn .emo-ic {
+        font-size: 1.6em;
+      }
+    }
+
+    .ttsUnlock-title {
+      font-weight: 700;
+      margin-bottom: 8px;
+      line-height: 1.4;
+      text-align: center;
+      white-space: nowrap;
+      /* 只在 <br> 斷，不在注音中間亂折 */
+    }
+
+    /* ====== Mobile only (≤768px) ====== */
+    @media (max-width:768px) {
+
+
+
+
+      /* 讓背景真的鋪滿整個畫面，避免底部留白 */
+      html,
+      body {
+        min-height: 80vh !important;
+      }
+
+      body {
+        padding-top: 44px !important;
+        /* 整體再往上 */
+        background-image: url("{{ url_for('static', filename='phone3.jpg') }}") !important;
+        background-size: cover !important;
+        background-position: center top !important;
+        background-repeat: no-repeat !important;
+        background-attachment: scroll !important;
+        background-color: #ffffff !important;
+        padding-bottom: env(safe-area-inset-bottom, 12px) !important;
+        /* iOS 安全區 */
+        overflow-x: hidden !important;
+      }
+
+
+
+
+      /* 進度列區塊更靠上、左右各 48px 容納返回/硬體 */
+      .progress-row {
+        width: 92vw !important;
+        margin-top: 40px !important;
+        margin: 0 auto 6px !important;
+        grid-template-columns: 48px 1fr 48px !important;
+        column-gap: 10px !important;
+        align-items: center !important;
+        justify-items: center !important;
+      }
+
+
+
+
+      /* 題號：改 5×2 的網格（五個一排） */
+      .progress {
+        display: grid !important;
+        grid-template-columns: repeat(5, 40px) !important;
+        /* 五個一排 */
+        grid-auto-rows: 40px;
+        justify-content: center;
+        gap: 10px !important;
+        margin: 4px 0 2px !important;
+        padding: 0 !important;
+      }
+
+      .dot {
+        width: 40px;
+        height: 40px;
+        line-height: 40px;
+        font-size: 20px;
+        border-radius: 50%;
+      }
+
+
+
+
+      /* 返回按鈕大一點 */
+      .progress-row .exit-icon {
+        padding: 0 !important;
+        background: transparent !important;
+        border: none !important;
+      }
+
+      .progress-row .exit-icon img {
+        width: 44px;
+        height: 44px;
+      }
+
+
+
+
+      /* 連接硬體：固定在最上方右側 */
+      #hwConnectBtn.hw-btn {
+        position: fixed !important;
+        top: 8px;
+        right: 12px;
+        z-index: 2000;
+        padding: 6px 10px !important;
+        font-size: 14px !important;
+        border-radius: 12px !important;
+        white-space: nowrap;
+      }
+
+
+
+
+      /* 題目區：更上方、內距縮小 */
+      .question-box {
+        max-width: 96vw !important;
+        margin-top: -2px !important;
+        padding: 6px 10px 10px !important;
+      }
+
+
+
+
+      /* 圖片/影片：再小一點，避免把按鈕擠到下方；高度也限縮 */
+      .question-box img,
+      #questionVideo {
+        width: min(72vw, 320px) !important;
+        /* ← 原本更寬，改更精簡 */
+        max-height: 34vh !important;
+        margin-top: 20px !important;
+        /* 讓選項能進首屏 */
+        object-fit: cover !important;
+        object-position: center top !important;
+        border-radius: 10px;
+      }
+
+
+
+
+      /* 題目文字：間距與字級微調 */
+      .question-box h2 {
+        margin: 10px auto 8px !important;
+        font-size: clamp(18px, 4.6vw, 22px) !important;
+        margin-top: 20px !important;
+        line-height: 1.4 !important;
+      }
+
+
+
+
+      /* 選項按鈕：只縮尺寸與間距（顏色不動） */
+      .options {
+        gap: 12px !important;
+        margin-top: 20px !important;
+        justify-content: center !important;
+        flex-wrap: wrap !important;
+      }
+
+      .option-btn {
+        min-width: 140px !important;
+        padding: 12px 18px !important;
+        font-size: 18px !important;
+        border-radius: 14px !important;
+      }
+
+
+
+
+      /* 完成視窗（保底） */
+      .finish-box {
+        width: 92vw !important;
+        margin: 10px auto !important;
+        padding: 16px !important;
+      }
+    }
+
+
+
+
+
+
+    /* === 圖片/影片 置中裁切；維持原尺寸，不再上方對齊 === */
+    .question-box img,
+    #questionVideo {
+      object-position: center center !important;
+      /* 原本 center top → 改 center */
+    }
+
+
+    /* 手機也一樣置中 */
+    @media (max-width:768px) {
+
+      .question-box img,
+      #questionVideo {
+        object-position: center center !important;
+      }
+    }
+
+    /* === 與題庫縮圖一致：置中裁切，大小不變 === */
+    .question-box img,
+    #questionVideo {
+      object-fit: cover !important;
+      /* 填滿容器，必要時裁切 */
+      object-position: center center !important;
+      /* 置中對齊，不再「上方對齊」 */
+    }
+
+    /* 強制統一行為，即使有 .too-small 也維持置中裁切 */
+    .question-box img.too-small,
+    #questionVideo.too-small {
+      object-fit: cover !important;
+      object-position: center center !important;
+    }
+
+    /* ===== 題目載入進度條 ===== */
+    #loadingBarWrapper {
+      position: fixed;
+      inset: 0;
+      background: rgba(255, 255, 255, 0.92);
+      z-index: 99998;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      backdrop-filter: blur(3px);
+    }
+
+    #loadingText {
+      font-size: 20px;
+      margin-bottom: 16px;
+      font-weight: 600;
+      color: #333;
+    }
+
+    #loadingBarOuter {
+      width: 60%;
+      max-width: 420px;
+      height: 14px;
+      background: #eee;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    #loadingBarInner {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #ffe600, #ffb400);
+      transition: width .2s ease;
+    }
+        </style>
+    </head>
+    <body data-logout-url="{{ url_for("auth.logout") }}">
+        <!-- ===== 題目載入進度條 ===== -->
+        <div id="loadingBarWrapper">
+            <div id="loadingText">進ㄐㄧㄣˋ 入ㄖㄨˋ 中ㄓㄨㄥ 呦一ㄡ ~</div>
+            <div id="loadingBarOuter">
+                <div id="loadingBarInner"></div>
+            </div>
+        </div>
+        <!-- 其餘內容/所有 inline script 再往下 -->
+        <script src="{{ url_for('static', filename='js/parent_timer.js') }}?v=20251025-6"></script>
+        <!-- 行動裝置 TTS 解鎖層（首次點擊後自動隱藏） -->
+        <div id="ttsUnlock"
+             style="position:fixed;
+                    inset:0;
+                    display:none;
+                    align-items:center;
+                    justify-content:center;
+                    background:rgba(255,255,255,.85);
+                    z-index:99999;
+                    backdrop-filter:blur(2px);
+                    font-size:20px;
+                    color:#333">
+            <div style="text-align:center">
+                <div class="ttsUnlock-title">
+                    觸ㄔㄨˋ 碰ㄆㄥˋ 螢一ㄥˊ 幕ㄇㄨˋ 後ㄏㄡˋ
+                    <br>
+                    開ㄎㄞ 始ㄕˇ 作ㄗㄨㄛˋ 答ㄉㄚˊ
+                </div>
+                <div style="font-size:14px;color:#666">（開啟語音播放）</div>
+            </div>
+        </div>
+        <!-- 新的一排：左=返回，中=題號(置中)，右=連接硬體 -->
+        <div class="progress-row">
+            <button class="exit-icon" onclick="showExitConfirm()" aria-label="返回上一頁">
+                <img src="{{ url_for('static', filename='exit.png') }}" alt="返回">
+            </button>
+            <div class="progress" id="progressBar" aria-label="作答進度"></div>
+            <button id="hwConnectBtn" class="hw-btn" type="button">連接硬體（未連線）</button>
+        </div>
+        <div class="question-box">
+            <img id="questionImage" src="" alt="題目圖片">
+            <video id="questionVideo"
+                   controls
+                   playsinline
+                   preload="auto"
+                   style="display:none">
+            </video>
+            <h2 id="questionText">題目載入中...</h2>
+            <div class="options" role="group" aria-label="選項">
+                <button class="option-btn"
+                        id="opt0"
+                        onclick="window.forceTTSUnlock?.(); submitAnswer(0)"></button>
+                <button class="option-btn"
+                        id="opt1"
+                        onclick="window.forceTTSUnlock?.(); submitAnswer(1)"></button>
+            </div>
+            <div class="feedback" id="feedback" aria-live="polite"></div>
+        </div>
+        <!-- finish box：答題結束時顯示，包含倒數按鈕 -->
+        <div class="finish-box" id="finishBox" role="region" aria-live="polite">
+            <div class="finish-title" id="finishTitle">答題完成！</div>
+            <div style="margin-bottom:12px;" id="finishSummary">總共答對 X / Y 題</div>
+            <button class="home-btn" id="btnHome" onclick="redirectNow()">回到首頁 (6s)</button>
+        </div>
+        <div class="modal"
+             id="exitModal"
+             role="dialog"
+             aria-modal="true"
+             aria-labelledby="exitTitle">
+            <div class="modal-content">
+                <p id="exitTitle">確定要提前結束作答嗎？</p>
+                <button class="btn-yes" onclick="exitQuiz()">是 ✓</button>
+                <button class="btn-no" onclick="hideExitConfirm()">否 ✗</button>
+            </div>
+        </div>
+        <!-- 全站倒數提醒容器（60s / 30s / 5s 用） -->
+        <div id="sysWarnToast" class="sysset-toast" hidden></div>
+        <script data-build="quiz-build" data-ts="{{ (namespace or 'NA') }}-{{  (request.args.get('s_type') or '圖片') }}-{{  (range(1)|list|length)  }}">
+      /* ===========================
+       Quiz.js  (Unified Build + Round Preload)
+       — 在建立回合後預先把整回合圖片/影片載入（含 A～E 修正）
+       =========================== */
+
+      /* ===== URL 與常數 ===== */
+      const params = new URLSearchParams(location.search);
+      const sType = params.get('s_type') || '圖片';
+      const API = '/quiz';
+      const ORIGIN = window.location.origin;
+
+      console.log('[Quiz build] API=', API, 'sType=', sType, 'now=', new Date().toISOString());
+
+      /* ===== 題目狀態 ===== */
+      let questions = [];
+      let _ttsToken = 0;
+      let current = 0;
+      let score = 0;
+      let endCalled = false;
+      let submitLocked = false;
+      let finishCountdownTimer = null;
+      let finishCountdownSeconds = 6;
+      let waitingToAdvance = false;
+      let pendingNext = null;
+      let pausedByHide = false;
+      let firstRenderDone = false;
+      let loadToken = 0;
+
+      /* ===== Web Serial 全域 ===== */
+      let currentRid = null;
+
+      /* ===== DOM ===== */
+      const connectBtn = document.getElementById('hwConnectBtn');
+      const progressBar = document.getElementById('progressBar');
+      const questionImage = document.getElementById('questionImage');
+      const questionVideo = document.getElementById('questionVideo');
+      const questionText = document.getElementById('questionText');
+      const optionButtons = [document.getElementById('opt0'), document.getElementById('opt1')];
+      const feedbackEl = document.getElementById('feedback');
+      const exitModal = document.getElementById('exitModal');
+      const finishBox = document.getElementById('finishBox');
+      const finishTitle = document.getElementById('finishTitle');
+      const finishSummary = document.getElementById('finishSummary');
+      const btnHome = document.getElementById('btnHome');
+
+      const HOME_URL = "{{ home_url | default(url_for('auth.index')) }}";
+      let lastKnownHome = HOME_URL;
+
+      /* ===== ParentTimer ===== */
+      window.DeferLogout = true;
+      const LOGOUT_URL = document.body?.getAttribute('data-logout-url') || '/auth/logout';
+      let hadTimerThisSession = false;
+      (function initTimerSeenFlag() {
+        try {
+          const active = localStorage.getItem('timer.active') === '1';
+          const endAt = Number(localStorage.getItem('timer.endAt') || '0');
+          if (active || endAt > Date.now()) hadTimerThisSession = true;
+          if (!hadTimerThisSession && localStorage.getItem('timer.logoutPending') === '1') {
+            localStorage.removeItem('timer.logoutPending');
+          }
+        } catch (_) { }
+      })();
+      window.addEventListener('storage', (e) => {
+        if (!e.key) return;
+        if (e.key === 'timer.active' || e.key === 'timer.endAt' || e.key === 'timer.ping') {
+          try {
+            const active = localStorage.getItem('timer.active') === '1';
+            const endAt = Number(localStorage.getItem('timer.endAt') || '0');
+            if (active || endAt > Date.now()) hadTimerThisSession = true;
+          } catch (_) { }
+        }
+      });
+      function shouldLogoutAfterRound() {
+        return hadTimerThisSession && localStorage.getItem('timer.logoutPending') === '1';
+      }
+
+      /* ===== fetch 防呆 ===== */
+      (function guardFetchOnce() {
+        const _rawFetch = window.fetch.bind(window);
+        window.fetch = function (url, opts, ...rest) {
+          try {
+            const u = (typeof url === 'string') ? url : (url?.url || '');
+            if (/^https?:\/\//i.test(u)) return _rawFetch(url, opts, ...rest);
+            if (/^\/(start_session|get_questions|submit_answer|end_session)(\b|\/|\?)/.test(u)) {
+              console.error(`❌ 前端打到根路徑 ${u}，應改成 ${API}${u}`);
+              return Promise.reject(new Error('bad endpoint'));
+            }
+          } catch (e) {
+            console.error(e.message); return Promise.reject(e);
+          }
+          return _rawFetch(url, opts, ...rest);
+        };
+      })();
+
+      /* ===== 字串工具 & 顏色映射（沿用你原本） ===== */
+      function escapeHtml(s = "") { return s.replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])) }
+      function stripEmoji(s) { return String(s || "").replace(/[😀😢😠😮😱🤢⭕❌]/g, "").trim(); }
+      const EMO_CH2EN = { "快樂": "HAPPY", "開心": "HAPPY", "高興": "HAPPY", "悲傷": "SAD", "難過": "SAD", "傷心": "SAD", "憤怒": "ANGRY", "生氣": "ANGRY", "驚訝": "SURPRISE", "恐懼": "FEAR", "害怕": "FEAR", "厭惡": "DISGUST", "討厭": "DISGUST", "噁心": "DISGUST", "HAPPY": "HAPPY", "SAD": "SAD", "ANGRY": "ANGRY", "SURPRISE": "SURPRISE", "FEAR": "FEAR", "DISGUST": "DISGUST", "正確": "正確", "錯誤": "錯誤", "對": "正確", "錯": "錯誤", "Yes": "正確", "YES": "正確", "No": "錯誤", "NO": "錯誤" };
+      const EMO_CH2EMOJI = { "快樂": "😀", "開心": "😀", "高興": "😀", "悲傷": "😢", "難過": "😢", "傷心": "😢", "憤怒": "😠", "生氣": "😠", "驚訝": "😮", "恐懼": "😱", "害怕": "😱", "厭惡": "🤢", "討厭": "🤢", "噁心": "🤢", "HAPPY": "😀", "SAD": "😢", "ANGRY": "😠", "SURPRISE": "😮", "FEAR": "😱", "DISGUST": "🤢" };
+      const TF_CH2EMOJI = { "正確": "◯", "對": "◯", "是": "◯", "Yes": "◯", "YES": "◯", "錯誤": "✕", "錯": "✕", "不是": "✕", "No": "✕", "NO": "✕" };
+      const EMOTION_COLOR_MAP = { ANGER: { bg: '#e53935' }, DISGUST: { bg: '#8BC34A' }, FEAR: { bg: '#B15BFF' }, HAPPINESS: { bg: '#FDD835' }, SADNESS: { bg: '#1E88E5' }, SURPRISE: { bg: '#FB8C00' } };
+      const EMO_TO_KEY = { "憤怒": "ANGER", "生氣": "ANGER", "ANGRY": "ANGER", "ANGER": "ANGER", "厭惡": "DISGUST", "討厭": "DISGUST", "噁心": "DISGUST", "DISGUST": "DISGUST", "恐懼": "FEAR", "害怕": "FEAR", "FEAR": "FEAR", "快樂": "HAPPINESS", "開心": "HAPPINESS", "高興": "HAPPINESS", "HAPPY": "HAPPINESS", "HAPPINESS": "HAPPINESS", "悲傷": "SADNESS", "難過": "SADNESS", "傷心": "SADNESS", "SAD": "SADNESS", "SADNESS": "SADNESS", "驚訝": "SURPRISE", "SURPRISE": "SURPRISE" };
+      const TF_COLOR_MAP = { "正確": { bg: '#43A047', fg: '#fff' }, "錯誤": { bg: '#E53935', fg: '#fff' } };
+
+      function getOptionColors(rawLabel, mode) {
+        const label = stripEmoji(rawLabel);
+        if (mode === 'tf') { return (label === '正確' || label === '錯誤') ? TF_COLOR_MAP[label] : null; }
+        const emoKey = EMO_TO_KEY[label] || (() => { for (const k in EMO_TO_KEY) { if (label.includes(k)) return EMO_TO_KEY[k]; } return null; })();
+        return emoKey ? EMOTION_COLOR_MAP[emoKey] : null;
+      }
+      function decorateLabelForDisplay(labelRaw, mode) {
+        const label = String(labelRaw || "").trim();
+        if (!label) return label;
+        if (/[😀😢😠😮😱🤢⭕❌]/.test(label)) return label;
+        if (mode === 'emotion') {
+          const emo = EMO_CH2EMOJI[label] || ""; if (emo) return `${emo} ${label}`;
+          for (const k in EMO_CH2EMOJI) { if (label.includes(k)) return `${EMO_CH2EMOJI[k]} ${label}`; }
+          return label;
+        }
+        if (mode === 'tf') { const tf = TF_CH2EMOJI[label] || ""; return tf ? `${tf} ${label}` : label; }
+        return label;
+      }
+      function setOptionLabel(btn, rawLabel, mode) {
+        const label = String(rawLabel || "").trim();
+        if (mode === 'tf') {
+          const icon = TF_CH2EMOJI[label] || TF_CH2EMOJI[stripEmoji(label)] || "";
+          if (icon) { btn.innerHTML = `<span class="opt-ic">${icon}</span>${escapeHtml(" " + label)}`; return; }
+        }
+        if (mode === 'emotion') {
+          const base = stripEmoji(label);
+          const emo = EMO_CH2EMOJI[base] || (() => { for (const k in EMO_CH2EMOJI) { if (base.includes(k)) return EMO_CH2EMOJI[k]; } return ""; })();
+          if (emo) { btn.innerHTML = `<span class="emo-ic">${emo}</span>${escapeHtml(base)}`; return; }
+        }
+        btn.textContent = decorateLabelForDisplay(label, mode);
+      }
+      function applyOptionStyle(btn, rawLabel, mode) {
+        const c = getOptionColors(rawLabel, mode);
+        btn.style.background = c ? c.bg : '#9e9e9e';
+        btn.style.color = '#fff';
+        btn.style.textShadow = '0 1px 2px rgba(0,0,0,.25)';
+        btn.style.boxShadow = '0 2px 6px rgba(0,0,0,.15)';
+        btn.style.border = 'none';
+      }
+
+      /* ===== TTS（沿用） ===== */
+      function _getTtsPrefs() { const r = parseFloat(localStorage.getItem('tts.rate') || '1.0'); const en = (localStorage.getItem('tts.enabled') ?? '1') !== '0'; return { rate: (isNaN(r) ? 1.0 : Math.min(2, Math.max(0.5, r))), enabled: en }; }
+      const IS_MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      const IS_IOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+      const MALE_VOICE_DENY = [/Po[-\s]?Yen|PoYen/i, /Yun[-\s]?Jhe|YunJhe/i, /Ko[-\s]?Jeng|KoJeng/i, /Mo[-\s]?Zhi|MoZhi/i];
+      const FEMALE_PREFER = [{ name: /Mei[-\s]?Jia|MeiJia|com\.apple\.ttsbundle\.Mei-Jia/i, lang: /zh[-_]?TW/i }, { name: /Ting[-\s]?Ting|TingTing|com\.apple\.ttsbundle\.Ting-Ting/i, lang: /zh/i }, { name: /Sin[-\s]?Ji|Kaho|com\.apple\.ttsbundle\.(Sin-Ji|Kaho)/i, lang: /zh/i }, { name: /Google/i, lang: /zh[-_]?TW/i }, { name: /Google/i, lang: /zh/i }];
+      let __voicesReady = null;
+      function ensureVoicesReady() { if (__voicesReady) return __voicesReady; try { speechSynthesis.getVoices(); } catch (_) { } __voicesReady = new Promise((resolve) => { const tryResolve = () => { const v = speechSynthesis.getVoices() || []; if (v.length) { resolve(v); return true; } return false; }; if (tryResolve()) return; const t1 = setTimeout(() => { tryResolve() && clear(); }, 250); const t2 = setTimeout(() => { tryResolve() && clear(); }, 600); const t3 = setTimeout(() => { resolve(speechSynthesis.getVoices()); clear(); }, 1200); const handler = () => { tryResolve() && clear(); }; const clear = () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); speechSynthesis.removeEventListener('voiceschanged', handler); }; speechSynthesis.addEventListener('voiceschanged', handler, { once: true }); try { speechSynthesis.getVoices(); } catch (_) { } }); return __voicesReady; }
+      (function clearMaleSavedOnce() { try { const saved = localStorage.getItem('tts.voiceURI') || localStorage.getItem('tts.voiceName') || ""; if (saved && MALE_VOICE_DENY.some(r => r.test(saved))) { localStorage.removeItem('tts.voiceURI'); localStorage.removeItem('tts.voiceName'); console.log('[TTS] Cleared saved male voice:', saved); } } catch (_) { } })();
+      function pickPreferredVoice() { const voices = speechSynthesis.getVoices() || []; if (!voices.length) return null; const isMale = (v) => MALE_VOICE_DENY.some(r => r.test(v.name) || r.test(v.voiceURI)); const isZh = (v) => /^zh/i.test(v.lang || "") || /中文|國語|國語（臺灣）|Mandarin/i.test(v.name || ""); const savedKey = localStorage.getItem('tts.voiceURI') || localStorage.getItem('tts.voiceName'); if (savedKey) { const vSaved = voices.find(v => v.voiceURI === savedKey || v.name === savedKey); if (vSaved && isZh(vSaved) && !isMale(vSaved)) return vSaved; } if (IS_IOS) { for (const pref of FEMALE_PREFER) { const v = voices.find(v => (pref.name?.test(v.name) || pref.name?.test(v.voiceURI)) && (pref.lang ? pref.lang.test(v.lang || "") : true)); if (v && isZh(v) && !isMale(v)) return v; } } let v = voices.find(v => /zh[-_]?TW/i.test(v.lang || "") && !isMale(v)); if (v) return v; v = voices.find(v => /^zh/i.test(v.lang || "") && !isMale(v)); if (v) return v; v = voices.find(v => !isMale(v)) || voices[0]; return v || null; }
+      function getUnifiedVoice() { try { if (window.StarSpeech && window.StarSpeech.voice) return window.StarSpeech.voice; } catch (_) { } try { return pickPreferredVoice(); } catch (_) { return null; } }
+      (function persistDesktopVoiceOnce() { try { Promise.resolve(window.StarSpeech?.ensureVoiceReady?.()).then(() => { const v = window.StarSpeech?.voice; if (v) { try { localStorage.setItem('tts.voiceURI', v.voiceURI || ''); localStorage.setItem('tts.voiceName', v.name || ''); } catch (_) { } } }).catch(() => { }); } catch (_) { } })();
+      function hardStopTTS() { try { _ttsToken++; } catch (_) { } if (window.StarSpeech?.cancelAll) { try { window.StarSpeech.cancelAll(); } catch (_) { } } else { try { window.speechSynthesis.cancel(); } catch (_) { } } }
+      function safeSpeak(text, delay = 0, onEnd = null) {
+        if (!text) return;
+        if (!window.__TTS_UNLOCKED__) { window.__pendingSpeak__ = () => { window.__pendingSpeak__ = null; safeSpeak(text, delay, onEnd); }; return; }
+        const prefs = _getTtsPrefs(); if (!prefs.enabled) { if (typeof onEnd === 'function') setTimeout(onEnd, Math.max(0, delay)); return; }
+        if (window.StarSpeech?.enqueue && !IS_MOBILE) { window.StarSpeech.enqueue({ text, delay, tag: 'quiz', priority: 'normal', onEnd: () => { try { onEnd && onEnd(); } catch (_) { } } }); return; }
+        ensureVoicesReady().then(() => { const myToken = ++_ttsToken; const u = new SpeechSynthesisUtterance(text); const voice = getUnifiedVoice(); if (voice) { u.voice = voice; if (voice.lang) u.lang = voice.lang; } else { u.lang = 'zh-TW'; } u.rate = prefs.rate; u.pitch = 1.0; u.onend = () => { if (!IS_MOBILE) { try { if (!window.StarSpeech?.enqueue) speechSynthesis.cancel(); } catch (_) { } } try { if (typeof onEnd === 'function' && myToken === _ttsToken) setTimeout(onEnd, 200); } catch (_) { } }; if (!IS_MOBILE) { try { speechSynthesis.cancel(); } catch (_) { } } setTimeout(() => { try { speechSynthesis.speak(u); } catch (_) { } }, delay); });
+      }
+      async function speakOnceAsync(text, { delay = 0 } = {}) { return new Promise(async (resolve) => { const prefs = _getTtsPrefs?.() || { enabled: true, rate: 1.0 }; if (!text || !prefs.enabled) return resolve(); try { await ensureVoicesReady(); } catch (_) { } try { await window.StarSpeech?.ensureVoiceReady?.(); } catch (_) { } const myToken = ++_ttsToken; const u = new SpeechSynthesisUtterance(text); const v = getUnifiedVoice(); if (v) { u.voice = v; if (v.lang) u.lang = v.lang; } else { u.lang = 'zh-TW'; } u.rate = prefs.rate; u.pitch = 1.0; let started = false; const clearAll = () => { try { u.onstart = u.onend = u.onerror = null; } catch (_) { } clearInterval(watch); }; u.onstart = () => { started = true; }; u.onend = () => { if (myToken === _ttsToken) { clearAll(); resolve(); } }; u.onerror = () => { clearAll(); resolve(); }; const watch = setInterval(() => { try { if (myToken === _ttsToken && started && !speechSynthesis.speaking) { clearAll(); resolve(); } } catch (_) { } }, 120); if (!IS_MOBILE) { try { speechSynthesis.cancel(); } catch (_) { } } setTimeout(() => { try { speechSynthesis.speak(u); } catch (_) { clearAll(); resolve(); } }, Math.max(0, delay)); const cap = Math.max(8000, text.length * 60 / prefs.rate * 2.2 + delay + 600); setTimeout(() => { clearAll(); resolve(); }, cap); }); }
+      async function waitForSpeakToFinish({ maxMs = 12000, alsoWaitVisible = true } = {}) { const start = Date.now(); return new Promise((resolve) => { const timer = setInterval(() => { const timeout = Date.now() - start >= maxMs; let speaking = false; try { speaking = speechSynthesis.speaking; } catch (_) { } const visibleOk = !alsoWaitVisible || !document.hidden; if ((timeout || !speaking) && visibleOk) { clearInterval(timer); resolve(); } }, 120); }); }
+      /* 行動裝置 TTS 解鎖層（保留） */
+      (function initTtsUnlockGate() {
+        const gate = document.getElementById('ttsUnlock');
+        if (window.__TTS_UNLOCKED__ || !IS_MOBILE || !gate) { window.__TTS_UNLOCKED__ = true; return; }
+        gate.style.display = 'flex';
+        try { window.dispatchEvent(new CustomEvent('ttsUnlock:shown')); } catch (_) { }
+        let unlocked = false;
+        async function doUnlock() {
+          if (unlocked) return; unlocked = true;
+          try { speechSynthesis.cancel(); } catch (_) { }
+          try { await ensureVoicesReady(); } catch (_) { }
+          const pref = pickPreferredVoice();
+          if (pref) { try { localStorage.setItem('tts.voiceURI', pref.voiceURI || ''); localStorage.setItem('tts.voiceName', pref.name || ''); } catch (_) { } }
+          const done = () => {
+            window.__TTS_UNLOCKED__ = true; gate.style.display = 'none';
+            try { if (typeof window.__pendingSpeak__ === 'function') { const fn = window.__pendingSpeak__; window.__pendingSpeak__ = null; fn(); } else if (window.questions?.length && window.current < window.questions.length) { setTimeout(() => { window.speakCurrentQuestion?.(true); }, 80); } } catch (_) { }
+          };
+          const u0 = new SpeechSynthesisUtterance('語音已開啟'); if (pref) { u0.voice = pref; u0.lang = pref.lang || 'zh-TW'; } else { u0.lang = 'zh-TW'; } u0.rate = 1.0; u0.volume = 0.8;
+          let fired = false; const once = (fn) => () => { if (fired) return; fired = true; fn(); };
+          u0.onstart = once(done); u0.onend = once(done); setTimeout(once(done), 1200);
+          try { speechSynthesis.speak(u0); } catch (_) { done(); }
+        }
+        document.addEventListener('touchend', doUnlock, { once: true, passive: true });
+        document.addEventListener('click', doUnlock, { once: true });
+        document.addEventListener('keydown', doUnlock, { once: true });
+        window.forceTTSUnlock = doUnlock;
+      })();
+
+      /* ===== 回合 API ===== */
+      async function startSession() {
+        try {
+          const res = await fetch(API + '/start_session', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin',
+            body: JSON.stringify({ user_id: 1 })
+          });
+          if (!res.ok) throw new Error('start_session ' + res.status);
+        } catch (e) { console.error('start_session error:', e); }
+      }
+
+      /* ============================
+         ✅ 媒體預載／解碼／快取（含整回合）
+      ============================ */
+      const _mediaCache = new Map(); // key: url, val: {type:'img'|'video', ready:boolean}
+      const MAX_CONCURRENCY = 4;     // ← 太大會搶頻寬；可依網速調 2~6
+
+      function resolveMediaUrl(q) {
+        const mediaUrl = q?.media || q?.img || '';
+        if (!mediaUrl) return '';
+        return mediaUrl.startsWith('http') ? mediaUrl : (ORIGIN + mediaUrl);
+      }
+      function isVideoUrl(url) { return /\.(mp4|webm|mov|m4v)$/i.test(url || ''); }
+
+      /* 單一 URL 預載 */
+      function preloadOne(url) {
+        if (!url || _mediaCache.has(url)) return Promise.resolve();
+        const video = isVideoUrl(url);
+
+        if (!video) {
+          const img = new Image();
+          img.decoding = 'async'; img.loading = 'eager'; try { img.fetchPriority = 'high'; } catch (_) { }
+          _mediaCache.set(url, { type: 'img', ready: false });
+          return new Promise((resolve) => {
+            img.onload = () => { _mediaCache.get(url).ready = true; resolve(); };
+            img.onerror = () => { resolve(); };
+            img.src = url;
+            img.decode?.().then(() => { _mediaCache.get(url).ready = true; }).catch(() => { }); // decode 之後仍 resolve onload
+          });
+        } else {
+          const v = document.createElement('video');
+          v.preload = 'metadata'; v.playsInline = true; v.muted = true;
+          _mediaCache.set(url, { type: 'video', ready: false });
+          return new Promise((resolve) => {
+            const done = () => { _mediaCache.get(url).ready = true; cleanup(); resolve(); };
+            const cleanup = () => { v.removeEventListener('loadedmetadata', done); v.removeEventListener('canplaythrough', done); v.removeEventListener('error', done); };
+            v.addEventListener('loadedmetadata', done, { once: true });
+            v.addEventListener('canplaythrough', done, { once: true });
+            v.addEventListener('error', done, { once: true });
+            v.src = url; v.load();
+          });
+        }
+      }
+
+      /* 批次（有限併發） */
+      async function preloadMany(urls) {
+        const list = urls.filter(Boolean).filter(u => !_mediaCache.has(u));
+        let idx = 0; const workers = new Array(Math.min(MAX_CONCURRENCY, list.length)).fill(0).map(async () => {
+          while (idx < list.length) {
+            const u = list[idx++]; try { await preloadOne(u); } catch (_) { }
+          }
+        });
+        await Promise.all(workers);
+      }
+
+      /* 只為第 i 題預載（保留給換題時暖身） */
+      function preloadMediaForIndex(i) {
+        if (!questions || i < 0 || i >= questions.length) return Promise.resolve();
+        const url = resolveMediaUrl(questions[i]);
+        return preloadOne(url);
+      }
+
+      /* ✅ 核心：整回合預載 */
+      async function prefetchRoundMediaAll() {
+        if (!questions?.length) return;
+        const urls = questions.map(q => resolveMediaUrl(q)).filter(Boolean);
+        /* 先注入 <link rel="preload/prefetch">，加速 HTTP 快取 */
+        try {
+          urls.forEach(u => {
+            if (isVideoUrl(u)) {
+              const l = document.createElement('link'); l.rel = 'preload'; l.as = 'video'; l.href = u; document.head.appendChild(l);
+            } else {
+              const l = document.createElement('link'); l.rel = 'preload'; l.as = 'image'; l.href = u; document.head.appendChild(l);
+            }
+            const p = document.createElement('link'); p.rel = 'prefetch'; p.href = u; document.head.appendChild(p);
+          });
+        } catch (_) { }
+        /* 實際做 decode/metadata 預載（有限併發） */
+        await preloadMany(urls);
+      }
+
+      /* 前 2~3 題搶先預載，降低前幾題停頓 */
+      async function preloadPrime(indexes = [0, 1, 2], timeoutMs = 2500) {
+        const urls = indexes.map(i => resolveMediaUrl(questions[i] || {})).filter(Boolean);
+        const p = preloadMany(urls);
+        return Promise.race([p, new Promise(r => setTimeout(r, timeoutMs))]);
+      }
+
+      /* 以往的「當前+下一題」暖身（保留） */
+      function warmNextMedia() {
+        preloadMediaForIndex(current);
+        preloadMediaForIndex(current + 1);
+      }
+
+      /* ===== 題目 UI 輔助 ===== */
+      function renderProgress() {
+        progressBar.innerHTML = '';
+        questions.forEach((_, i) => {
+          const dot = document.createElement('div');
+          dot.className = 'dot' + (i === current ? ' active' : '');
+          dot.textContent = i + 1;
+          progressBar.appendChild(dot);
+        });
+      }
+      function setOptionsEnabled(enabled) { optionButtons.forEach(btn => btn.disabled = !enabled); }
+
+      /* ===== 題目播報 ===== */
+      let _spokenKey = null;
+      function speakCurrentQuestion(force = false) {
+        try {
+          if (!questions || current >= questions.length) return;
+          const text = String(questions[current]?.text || '').trim();
+          const key = `${current}|${text}`;
+          if (!force && _spokenKey === key) return;
+          _spokenKey = key;
+          setTimeout(() => safeSpeak(`第${current + 1}題。${text}`), 100);
+        } catch (_) { }
+      }
+      window.speakCurrentQuestion = speakCurrentQuestion;
+
+      /* ===== 題目渲染（快取優先 + 不加 cache-buster） ===== */
+      function renderQuestion() {
+        try { localStorage.setItem('quiz.state', 'inprogress'); } catch (_) { }
+        if (current >= questions.length) {
+          questionImage.style.display = 'none';
+          try { questionVideo.pause(); } catch (_) { }
+          questionVideo.removeAttribute('src'); questionVideo.load(); questionVideo.style.display = 'none';
+          questionText.textContent = `答題完成！總共答對 ${score} / ${questions.length} 題`;
+          document.querySelector('.options').style.display = 'none';
+          feedbackEl.style.display = 'none';
+          (async () => {
+            await endSession();
+            try { localStorage.setItem('quiz.state', 'finished'); } catch (_) { }
+            if (shouldLogoutAfterRound()) {
+              try { localStorage.removeItem('timer.logoutPending'); } catch (_) { }
+              location.replace(LOGOUT_URL); return;
+            }
+            showFinishBox();
+          })();
+          return;
+        }
+
+        const q = questions[current] || {};
+        const url = resolveMediaUrl(q);
+        const isV = isVideoUrl(url);
+
+        /* 仍保留當前+下一題暖身 */
+        warmNextMedia();
+
+        if (isV && url) {
+          try { questionImage.removeAttribute('src'); } catch (_) { }
+          questionImage.style.display = 'none'; questionImage.alt = '';
+
+          questionVideo.style.display = 'block';
+          questionVideo.preload = 'auto';
+          questionVideo.playsInline = true;
+          try { questionVideo.muted = true; } catch (_) { }
+          questionVideo.src = url;                 // 不加 ?v=Date.now()
+          try { questionVideo.play().catch(() => { }); } catch (_) { }
+
+        } else if (url) {
+          try { questionVideo.pause(); } catch (_) { }
+          questionVideo.removeAttribute('src'); questionVideo.load(); questionVideo.style.display = 'none';
+
+          const cached = _mediaCache.get(url);
+          questionImage.style.visibility = 'hidden';
+          questionImage.style.display = 'block';
+          questionImage.alt = '題目圖片';
+
+          if (cached?.type === 'img' && cached.ready) {
+            questionImage.src = url;
+            requestAnimationFrame(() => { questionImage.style.visibility = 'visible'; });
+          } else {
+            const img = new Image(); img.decoding = 'async'; img.loading = 'eager'; img.src = url;
+            img.decode?.().catch(() => { }).finally(() => {
+              questionImage.src = url; questionImage.style.visibility = 'visible';
+              _mediaCache.set(url, { type: 'img', ready: true });
+            });
+          }
+
+        } else {
+          try { questionVideo.pause(); } catch (_) { }
+          questionVideo.removeAttribute('src'); questionVideo.load(); questionVideo.style.display = 'none';
+          try { questionImage.removeAttribute('src'); } catch (_) { }
+          questionImage.style.display = 'none'; questionImage.alt = '';
+        }
+
+        const text = q.text || '請觀察圖片並作答';
+        questionText.textContent = text;
+
+        const TF_SET = new Set(["正確", "錯誤", "對", "錯", "Yes", "YES", "No", "NO"]);
+        const isTF = (q.options || []).every(x => TF_SET.has(stripEmoji(x)));
+        const mode = isTF ? 'tf' : 'emotion';
+        setOptionLabel(optionButtons[0], q.options?.[0] ?? '', mode);
+        setOptionLabel(optionButtons[1], q.options?.[1] ?? '', mode);
+        applyOptionStyle(optionButtons[0], q.options?.[0] ?? '', mode);
+        applyOptionStyle(optionButtons[1], q.options?.[1] ?? '', mode);
+
+        document.querySelector('.options').style.display = 'flex';
+        feedbackEl.style.display = 'block';
+        feedbackEl.textContent = '';
+
+        if (!IS_MOBILE) { try { window.speechSynthesis.cancel(); } catch (_) { } }
+        setTimeout(() => safeSpeak(`第${current + 1}題。${text}`), 80);
+
+        setOptionsEnabled(true);
+        renderProgress();
+        submitLocked = false;
+
+        setTimeout(sendCurrentOptionsToDevice, 80);
+      }
+
+      /* ===== 完成盒/送答/退出（沿用原本） ===== */
+      function showFinishBox() {
+        const needLogout = shouldLogoutAfterRound();
+        finishSummary.textContent = `總共答對 ${score} / ${questions.length} 題`;
+        finishTitle.textContent = needLogout ? '答題結束，將自動登出' : '答題結束，感謝你完成練習！';
+        finishBox.style.display = 'block';
+        finishCountdownSeconds = 6;
+        btnHome.textContent = needLogout ? `登出 (${finishCountdownSeconds}s)` : `回到首頁 (${finishCountdownSeconds}s)`;
+        if (finishCountdownTimer) { clearInterval(finishCountdownTimer); finishCountdownTimer = null; }
+        finishCountdownTimer = setInterval(() => {
+          finishCountdownSeconds -= 1;
+          if (finishCountdownSeconds <= 0) { clearInterval(finishCountdownTimer); finishCountdownTimer = null; redirectNow(); return; }
+          btnHome.textContent = needLogout ? `登出 (${finishCountdownSeconds}s)` : `回到首頁 (${finishCountdownSeconds}s)`;
+        }, 1000);
+      }
+      async function redirectNow() {
+        try { if (!endCalled) await endSession(); } catch (e) { console.warn('redirect endSession err', e); }
+        if (finishCountdownTimer) { clearInterval(finishCountdownTimer); finishCountdownTimer = null; }
+        const needLogout = shouldLogoutAfterRound();
+        window.location.href = needLogout ? LOGOUT_URL : lastKnownHome;
+      }
+      async function submitAnswer(choice) {
+        if (submitLocked) return; submitLocked = true;
+        const q = questions[current]; if (!q) return;
+        setOptionsEnabled(false);
+        try {
+          const res = await fetch(API + '/submit_answer', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin',
+            body: JSON.stringify({ id: q.id, selected: q.options[choice] })
+          });
+          const ct = (res.headers.get('content-type') || '').toLowerCase();
+          if (!res.ok) { const t = await res.text(); console.error('[submit_answer] not ok', res.status, t.slice(0, 300)); throw new Error('HTTP ' + res.status); }
+          if (!ct.includes('application/json')) { const t = await res.text(); console.error('[submit_answer] non-json', ct, t.slice(0, 300)); throw new Error('Non-JSON response'); }
+          const data = await res.json();
+          const correct = !!data.correct;
+          sendResultToDevice(correct);
+          if (correct) { feedbackEl.textContent = "太棒了！你答對了！"; feedbackEl.style.color = 'green'; score += 1; }
+          else { feedbackEl.textContent = `沒關係，再試一次喔！ 正確答案：${data.correct_answer ?? ''}`; feedbackEl.style.color = 'red'; }
+          const aiFeedback = data.feedback && String(data.feedback).trim().length ? data.feedback.trim() : (correct ? "你好棒！這題你答對了！" : "這個表情好像不是這樣喔，再想一想看看");
+          if (aiFeedback) { const line = document.createElement('div'); line.textContent = aiFeedback; line.style.marginTop = '8px'; line.style.color = '#333'; feedbackEl.appendChild(line); }
+          let nextQueued = false;
+          const goNext = () => { if (nextQueued) return; nextQueued = true; waitingToAdvance = false; pendingNext = null; current += 1; currentRid = null; renderQuestion(); };
+          waitingToAdvance = true; pendingNext = goNext;
+          if (aiFeedback) {
+            try { await speakOnceAsync(aiFeedback, { delay: 300 }); await waitForSpeakToFinish({ maxMs: 12000, alsoWaitVisible: true }); await new Promise(r => setTimeout(r, 150)); } catch (_) { }
+            goNext();
+          } else { setTimeout(goNext, 200); }
+        } catch (e) {
+          console.error(e);
+          feedbackEl.textContent = '送出答案時發生錯誤，請再試一次。';
+          feedbackEl.style.color = '#a00';
+          setOptionsEnabled(true);
+          submitLocked = false;
+        }
+      }
+      function showExitConfirm() { exitModal.style.display = 'flex'; }
+      function hideExitConfirm() { exitModal.style.display = 'none'; }
+      async function exitQuiz() {
+        try { await endSession(); } catch (_) { }
+        hardStopTTS();
+        const needLogout = shouldLogoutAfterRound();
+        window.location.replace(needLogout ? LOGOUT_URL : lastKnownHome);
+      }
+      window.addEventListener('beforeunload', () => {
+        hardStopTTS();
+        if (endCalled) return;
+        endCalled = true;
+        navigator.sendBeacon(API + '/end_session', new Blob([JSON.stringify({ correct_count: score, total_questions: questions.length })], { type: 'application/json' }));
+      });
+      window.addEventListener('pagehide', hardStopTTS, { capture: true });
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) { hardStopTTS(); pausedByHide = true; return; }
+        try { if (questions?.length && current < questions.length && !speechSynthesis.speaking) { speakCurrentQuestion(false); } } catch (_) { }
+      });
+
+      /* ===== 硬體（沿用） ===== */
+      function reflectHWStatus(connected) {
+        if (!connectBtn) return;
+        if (connected) { connectBtn.textContent = '✅ 硬體已連線'; connectBtn.classList.add('connected'); }
+        else { connectBtn.textContent = '連接硬體（未連線）'; connectBtn.classList.remove('connected'); }
+      }
+      function getTwoOptionButtons() {
+        const list = optionButtons.filter(Boolean).filter(el => el.offsetParent !== null);
+        if (list.length < 2) {
+          const more = Array.from(document.querySelectorAll('.options .option-btn')).filter(el => el.offsetParent !== null);
+          if (more.length >= 2) return [more[0], more[1]];
+        }
+        return [list[0] || null, list[1] || null];
+      }
+      function readLabel(btn) { return stripEmoji(btn?.textContent || btn?.innerText || ''); }
+      function genRID() { return Math.random().toString(36).slice(2, 8).toUpperCase(); }
+      function writeHW(line) {
+        try { if (window.SerialHW && window.SerialHW.connected) { window.SerialHW.write(line); return; } } catch (_) { }
+        if (window.__QuizLocalHW?.connected && window.__QuizLocalHW?.write) { window.__QuizLocalHW.write(line); }
+      }
+      function sendCurrentOptionsToDevice() {
+        const isConnected = !!(window.SerialHW?.connected || window.__QuizLocalHW?.connected);
+        if (!isConnected) return;
+        const [a, b] = getTwoOptionButtons(); if (!a || !b) return;
+        const la = readLabel(a), lb = readLabel(b); if (!la || !lb) return;
+        currentRid = genRID();
+        const A = EMO_CH2EN[la] || la; const B = EMO_CH2EN[lb] || lb;
+        writeHW(`Q,${currentRid},${A},${B}`);
+      }
+      function handleDeviceLine(line) {
+        const parts = String(line || '').split(',').map(s => s.trim());
+        if (parts[0] !== 'ANS' || parts.length !== 3) return;
+        const rid = parts[1], ab = parts[2]; if (!rid || rid !== currentRid) return;
+        const [a, b] = getTwoOptionButtons();
+        const idx = (ab === 'A') ? 0 : 1;
+        const target = [a, b][idx];
+        if (target) { target.click(); }
+      }
+      function sendResultToDevice(isCorrect) {
+        if (!currentRid) return;
+        writeHW(`R,${currentRid},${isCorrect ? 'OK' : 'NG'}`);
+        setTimeout(() => { currentRid = null; }, 120);
+      }
+      function hookGlobalSingleton() {
+        if (!window.SerialHW) return false;
+        try {
+          window.addEventListener('hw-status', (e) => { reflectHWStatus(!!e?.detail?.connected); if (e?.detail?.connected) setTimeout(sendCurrentOptionsToDevice, 80); });
+          window.addEventListener('hw-line', (e) => { const line = (typeof e?.detail === 'string') ? e.detail : ''; if (line) handleDeviceLine(line); });
+        } catch (_) { }
+        connectBtn?.addEventListener('click', () => window.SerialHW.connect());
+        try { window.SerialHW.tryReconnect(); } catch (_) { }
+        reflectHWStatus(!!window.SerialHW.connected);
+        if (window.SerialHW.connected) setTimeout(sendCurrentOptionsToDevice, 120);
+        return true;
+      }
+      function setupLocalFallback() {
+        if (!('serial' in navigator)) return;
+        const state = { port: null, reader: null, writer: null, decoder: null, connected: false };
+        async function openSelected(p) {
+          await p.open({ baudRate: 115200 });
+          state.decoder = new TextDecoderStream();
+          p.readable.pipeTo(state.decoder.writable);
+          state.reader = state.decoder.readable.getReader();
+          state.writer = p.writable.getWriter();
+          state.port = p; state.connected = true;
+          reflectHWStatus(true);
+          readLoop();
+          setTimeout(sendCurrentOptionsToDevice, 80);
+        }
+        async function readLoop() {
+          let buf = ''; try {
+            while (state.connected && state.reader) {
+              const { value, done } = await state.reader.read();
+              if (done) break;
+              if (value) {
+                buf += value;
+                let i; while ((i = buf.indexOf('\n')) >= 0) {
+                  const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1);
+                  if (line) handleDeviceLine(line);
+                }
+              }
+            }
+          } catch (_) { }
+          cleanup();
+        }
+        function cleanup() {
+          if (!state.connected) return;
+          state.connected = false; reflectHWStatus(false);
+          try { state.reader?.releaseLock(); } catch (_) { }
+          try { state.writer?.releaseLock(); } catch (_) { }
+          state.reader = state.writer = state.decoder = null;
+          state.port = null; currentRid = null;
+        }
+        async function connect() {
+          try {
+            const pre = await navigator.serial.getPorts();
+            const p = pre[0] || await navigator.serial.requestPort();
+            await openSelected(p);
+            navigator.serial.addEventListener('disconnect', cleanup);
+          } catch (e) { console.error(e); alert('連線失敗：' + e); cleanup(); }
+        }
+        async function tryReconnect() {
+          try {
+            const pre = await navigator.serial.getPorts();
+            if (pre.length) { await openSelected(pre[0]); } else { reflectHWStatus(false); }
+          } catch (_) { cleanup(); }
+        }
+        async function write(line) {
+          if (!state.connected || !state.writer) return;
+          const data = new TextEncoder().encode(line.endsWith('\n') ? line : (line + '\n'));
+          try { await state.writer.write(data); } catch (_) { }
+        }
+        window.__QuizLocalHW = { get connected() { return state.connected; }, connect, tryReconnect, write };
+        connectBtn?.addEventListener('click', connect);
+        tryReconnect(); reflectHWStatus(state.connected);
+        if (state.connected) setTimeout(sendCurrentOptionsToDevice, 120);
+      }
+
+      /* ===== DOM 監看 ===== */
+      const optsRoot = document.querySelector('.options') || document.body;
+      const mo = new MutationObserver(() => { setTimeout(sendCurrentOptionsToDevice, 50); });
+      mo.observe(optsRoot, { childList: true, subtree: true });
+      if (progressBar) {
+        const mo2 = new MutationObserver(() => setTimeout(sendCurrentOptionsToDevice, 50));
+        mo2.observe(progressBar, { childList: true, subtree: false });
+      }
+      /* ===== Loading 動畫控制 ===== */
+
+      let loadingInterval = null;
+      function startLoadingAnimation() {
+        const bar = document.getElementById('loadingBarInner');
+        let progress = 0;
+
+        loadingInterval = setInterval(() => {
+          // 前 40% 慢慢跑
+          if (progress < 40) progress += (Math.random() * 3 + 1);
+
+          // 40%~80% 慢速增加
+          else if (progress < 80) progress += (Math.random() * 2 + 0.5);
+
+          // 80% 之後很慢，等待真正完成
+          else if (progress < 95) progress += (Math.random() * 1);
+
+          if (progress > 98) progress = 98;
+
+          bar.style.width = progress + "%";
+        }, 120);
+      }
+
+      function finishLoadingAnimation() {
+        const wrap = document.getElementById('loadingBarWrapper');
+        const bar = document.getElementById('loadingBarInner');
+
+        if (loadingInterval) clearInterval(loadingInterval);
+
+        // 直接跑到 100%
+        bar.style.width = '100%';
+
+        // 0.4 秒後淡出
+        setTimeout(() => {
+          wrap.style.transition = "opacity .4s ease";
+          wrap.style.opacity = 0;
+
+          // 完全移除
+          setTimeout(() => { wrap.style.display = 'none'; }, 400);
+        }, 400);
+      }
+      /* ===== 題目載入：先 Prime，再 render，再整回合預載 ===== */
+      async function loadQuestions() {
+        startLoadingAnimation();
+        const my = ++loadToken;
+        try {
+          const url = API + '/get_questions?s_type=' + encodeURIComponent(sType);
+          const res = await fetch(url, { method: 'GET', cache: 'no-store', headers: { 'Accept': 'application/json' }, credentials: 'same-origin' });
+          const ct = (res.headers.get('content-type') || '').toLowerCase();
+          if (!res.ok) { const t = await res.text(); console.error('[get_questions] not ok', res.status, t.slice(0, 300)); throw new Error('HTTP ' + res.status); }
+          if (!ct.includes('application/json')) { const t = await res.text(); console.error('[get_questions] non-json', ct, t.slice(0, 300)); throw new Error('Non-JSON response'); }
+          const qs = await res.json();
+          if (my !== loadToken) return;
+          questions = Array.isArray(qs) ? qs : [];
+          if (questions.length === 0) {
+            if (!firstRenderDone) {
+              questionText.textContent = '目前沒有題目，請稍後再試。';
+              document.querySelector('.options').style.display = 'none';
+            }
+            return;
+          }
+
+          /* ✅ 先把前 3 題預載完成（最多等 2.5s），再顯示第一題 */
+          try { await preloadPrime([0, 1, 2], 2500); } catch (_) { }
+
+          renderQuestion();
+
+          if (!firstRenderDone) {
+            finishLoadingAnimation();   // ← 第一次題目渲染後結束 loading
+          }
+          firstRenderDone = true;
+
+
+        } catch (e) {
+          console.error('loadQuestions error:', e);
+          if (!firstRenderDone && my === loadToken) { questionText.textContent = '載入題目失敗，請重新整理頁面。'; }
+        }
+      }
+
+      async function endSession() {
+        if (endCalled) return; endCalled = true;
+        try {
+          const res = await fetch(API + '/end_session', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin',
+            body: JSON.stringify({ correct_count: score, total_questions: questions.length })
+          });
+          if (res.ok) { const data = await res.json().catch(() => null); if (data?.home_url) lastKnownHome = data.home_url; }
+        } catch (e) { console.error('end_session error:', e); }
+      }
+
+      /* ===== 初始化 ===== */
+      speechSynthesis.getVoices();
+      (function init() {
+        window.addEventListener('DOMContentLoaded', () => { if (!hookGlobalSingleton()) setupLocalFallback(); });
+        try { if (localStorage.getItem('tts.enabled') === '0') localStorage.setItem('tts.enabled', '1'); } catch (_) { }
+        (async () => { await startSession(); await loadQuestions(); })();
+      })();
+      console.log('[quiz] lastKnownHome =', lastKnownHome);
+
+      /* ===== 對外 ===== */
+      window.submitAnswer = submitAnswer;
+      window.exitQuiz = exitQuiz;
+      window.showExitConfirm = showExitConfirm;
+      window.hideExitConfirm = hideExitConfirm;
+        </script>
+    </body>
+</html>

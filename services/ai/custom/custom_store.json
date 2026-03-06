@@ -1,0 +1,78 @@
+{
+  "next_set_id": 3,
+  "next_c_id": 8,
+  "next_cs_id": 3,
+  "users": {
+    "1": {
+      "sets": {
+        "2": {
+          "set_id": 2,
+          "set_title": "我的題組 20250927-224833",
+          "set_count": 1
+        }
+      },
+      "questions": {
+        "2": [
+          {
+            "c_id": 4,
+            "c_text": "以下哪一個最符合這張圖片中的人物的情緒？",
+            "c_answer": "憤怒",
+            "c_media_url": "/ai/custom/uploads/101735649_8_1758984506539.jpg"
+          },
+          {
+            "c_id": 5,
+            "c_text": "這張圖片中的人物此刻的情緒應該是什麼？",
+            "c_answer": "悲傷",
+            "c_media_url": "/ai/custom/uploads/1526916_1758984506704.jpg"
+          },
+          {
+            "c_id": 6,
+            "c_text": "（AI 失敗，請人工輸入題目）",
+            "c_answer": "",
+            "c_media_url": "/ai/custom/uploads/1479698026_cc_iStock_78822855_LARGE-2_16x9_1758984506740.jpg"
+          },
+          {
+            "c_id": 7,
+            "c_text": "照片裡的人物是什麼情緒？",
+            "c_answer": "悲傷",
+            "c_media_url": "/ai/custom/uploads/cbb9343ef431d8a49f98a0ce9df04f68_t_1758984506761.jpeg"
+          }
+        ]
+      },
+      "sessions": {
+        "2": {
+          "cs_id": 2,
+          "set_id": 2,
+          "start": "2025-09-27 22:48:40",
+          "end": "2025-09-27 22:48:45"
+        }
+      },
+      "records": [
+        {
+          "cs_id": 2,
+          "c_id": 4,
+          "cr_user_answer": "生氣",
+          "cr_is_correct": 0
+        },
+        {
+          "cs_id": 2,
+          "c_id": 5,
+          "cr_user_answer": "開心",
+          "cr_is_correct": 0
+        },
+        {
+          "cs_id": 2,
+          "c_id": 6,
+          "cr_user_answer": "驚訝",
+          "cr_is_correct": 0
+        },
+        {
+          "cs_id": 2,
+          "c_id": 7,
+          "cr_user_answer": "難過",
+          "cr_is_correct": 0
+        }
+      ]
+    }
+  }
+}

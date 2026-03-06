@@ -1,0 +1,56 @@
+{
+  "next_ids": {
+    "set": 2,
+    "c": 4,
+    "cs": 2,
+    "cr": 2
+  },
+  "sets": [
+    {
+      "set_id": 1,
+      "set_title": "我的題組 20250927-215139",
+      "set_count": 1,
+      "user_id": 1
+    }
+  ],
+  "questions": [
+    {
+      "c_id": 1,
+      "set_id": 1,
+      "c_text": "這張圖片的人看起來是什麼情緒？",
+      "c_answer": "憤怒",
+      "c_media_url": "/ai/custom/uploads/101735649_8_1758981095895.jpg"
+    },
+    {
+      "c_id": 2,
+      "set_id": 1,
+      "c_text": "這張圖片的人看起來是什麼情緒？",
+      "c_answer": "恐懼",
+      "c_media_url": "/ai/custom/uploads/images_2_1758981095945.jpeg"
+    },
+    {
+      "c_id": 3,
+      "set_id": 1,
+      "c_text": "這張圖片的人看起來是什麼情緒？",
+      "c_answer": "快樂",
+      "c_media_url": "/ai/custom/uploads/images_1_1758981095985.jpeg"
+    }
+  ],
+  "sessions": [
+    {
+      "cs_id": 1,
+      "set_id": 1,
+      "cs_start_time": "2025-09-27 21:51:46",
+      "cs_end_time": "2025-09-27 21:51:47"
+    }
+  ],
+  "records": [
+    {
+      "cr_id": 1,
+      "cs_id": 1,
+      "c_id": 1,
+      "cr_user_answer": "憤怒",
+      "cr_is_correct": 1
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+# Web (AI 微服務用，若整併至主程式則以根目錄 requirements.txt 為主)
+Flask==2.3.3
+flask-cors==4.0.0
+gunicorn==21.2.0
+python-dotenv==1.0.1
+requests==2.32.3
+PyMySQL==1.1.0
+
+# TensorFlow 2.10 相容套件 (Linux CPU)
+tensorflow==2.10.1
+keras==2.10.0
+tensorboard==2.10.1
+numpy==1.23.5
+pandas==1.5.3
+typing-extensions==4.5.0
+
+# 情緒、特徵辨識與影像處理核心
+fer==22.5.1
+mediapipe==0.10.21
+deepface==0.0.83
+opencv-python-headless==4.8.1.78
+Pillow==10.3.0
+
+# 動態影像 (GIF / Video) 抽幀與轉檔處理
+imageio==2.37.0
+imageio-ffmpeg==0.6.0
+moviepy==1.0.3
+tqdm==4.66.4

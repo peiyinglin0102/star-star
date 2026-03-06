@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>自訂題庫管理</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+       * { box-sizing: border-box; }
+    :root{
+      --sb-bg:#1f2937; --sb-bg-hover:#374151; --sb-text:#e5e7eb; --sb-muted:#9ca3af;
+      --bg:#f3f4f6; --card:#ffffff; --line:#e5e7eb; --primary:#3b82f6;
+      --shadow:0 6px 18px rgba(0,0,0,.06); --radius:14px;
+    }
+    body { margin:0; font-family: "Arial","微軟正黑體",sans-serif; background:var(--bg); color:#111; }
+
+    /* 側欄（同 frontpage，略） */
+    .sidebar { width:260px; background:var(--sb-bg); color:var(--sb-text); height:100vh; padding:24px 16px; position:fixed; display:flex; flex-direction:column; box-shadow: 0 0 0 1px rgba(255,255,255,.04) inset, var(--shadow); }
+    .sidebar-scroll{ overflow-y:auto; overflow-x:hidden; padding-right:4px; padding-bottom:16px; flex:1; }
+    .admin-label{ text-align:center; font-weight:800; font-size:16px; letter-spacing:.5px; color:var(--sb-text); margin:12px 2px 18px; }
+    .section{ margin:10px 0 14px; padding-top:6px; border-top:1px solid rgba(255,255,255,.06); }
+    .section:first-of-type{ border-top:none; margin-top:4px; }
+    .section-label{ text-align:left; color:var(--sb-muted); font-weight:700; font-size:13px; letter-spacing:.6px; padding:6px 6px; margin-bottom:6px; user-select:none; }
+    .submenu{ display:flex; flex-direction:column; gap:8px; }
+    .submenu-link, .submenu-item{ display:flex; align-items:center; gap:10px; text-decoration:none; text-align:left; padding:10px 12px; font-size:13px; border-radius:10px; color:var(--sb-text); background:transparent; border:1px solid rgba(255,255,255,.12); transition:.15s; }
+    .submenu-link:hover{ background:var(--sb-bg-hover); border-color:rgba(255,255,255,.18); }
+    .submenu-item{ opacity:.6; cursor:not-allowed; }
+    .submenu-link.is-active{ position:relative; background:#257beb; border-color:#257beb; color:#fff; box-shadow: inset 0 0 0 1px rgba(255,255,255,.12); }
+    .submenu-link.is-active::before{ content:""; position:absolute; left:-12px; top:8px; bottom:8px; width:4px; background:#3b82f6; border-radius:4px; }
+    .sidebar-footer{ margin-top:auto; padding-top:14px; padding-bottom:6px; border-top:1px solid rgba(255,255,255,.06); }
+    .logout-button{ width:100%; margin:12px 0 6px; padding:9px 10px; border-radius:9px; font-size:13px; text-align:center; background:rgba(239,68,68,.10); color:#ef4444; border:1px solid rgba(239,68,68,.35); cursor:pointer; transition:.15s; }
+    .logout-button:hover{ background:rgba(239,68,68,.18); border-color:rgba(239,68,68,.5); }
+
+    /* 主內容 */
+    .main{ margin-left:260px; padding:40px; }
+    h1{ text-align:center; font-size:28px; margin-bottom:14px; }
+    .search-bar{ display:flex; align-items:center; gap:8px; }
+    .search-bar input{ border:none; padding:8px 18px; border-radius:30px; background:#d9d9d9; width:260px; font-size:16px; }
+
+    table{ width:100%; border-collapse:collapse; background:#fff; border:1px solid var(--line); border-radius:10px; /*overflow:hidden;*/ }
+    th, td{ text-align:center; padding:12px; font-size:15px; border-bottom:1px solid #f1f5f9; }
+    th{ background:#f9fafb; color:#374151; font-weight:600; border-bottom:1px solid var(--line); }
+    .tool-btn{ border:none; background:#e7e7e7; padding:8px 12px; border-radius:999px; cursor:pointer; font-size:14px; }
+    .pager{ margin-top:16px; display:flex; gap:10px; justify-content:center; align-items:center; }
+    .pager button{ background:#e5e7eb; border:none; border-radius:50%; width:30px; height:30px; cursor:pointer; }
+    .pager button.active{ background:#2563eb; color:#fff; }
+
+    /* ===== 手機修復：取消 nowrap，固定欄寬避免右側空白 ===== */
+    @media (max-width: 768px) {
+        /* 覆蓋 inline-style，讓面板緊貼視窗寬高、不溢出 */
+  #setModal > div,
+  #itemModal > div{
+    width: 96vw !important;
+    max-width: 96vw !important;
+    max-height: 88vh !important;
+    border-radius: 12px !important;
+    overflow: auto !important;
+  }
+
+  /* 面板頂部標題列精簡一點 */
+  #setModal > div > div:first-child,
+  #itemModal > div > div:first-child{
+    padding: 12px 14px !important;
+    font-size: 16px !important;
+  }
+
+  /* 內部表格固定欄寬+可換行，避免撐出水平捲軸 */
+  #setModal table,
+  #itemModal table{
+    table-layout: fixed;
+    width: 100%;
+    white-space: normal;      /* 允許換行 */
+  }
+
+  /* 表格字距與對齊精簡 */
+  #setModal thead th, #setModal tbody td,
+  #itemModal thead th, #itemModal tbody td{
+    padding: 10px 8px;
+    font-size: 14px;
+    text-align: left;
+  }
+
+  /* ===== 題組列表（名稱／次數／正確率／查看）欄寬比例 ===== */
+  #setModal thead th:nth-child(1), #setModal tbody td:nth-child(1){ width: 52%; }   /* 題組名字 */
+  #setModal thead th:nth-child(2), #setModal tbody td:nth-child(2){ width: 16%; text-align: center; }
+  #setModal thead th:nth-child(3), #setModal tbody td:nth-child(3){ width: 16%; text-align: center; }
+  #setModal thead th:nth-child(4), #setModal tbody td:nth-child(4){ width: 16%; text-align: right; }
+
+  /* 讓查看連結不壓縮 */
+  #setModal td span{ display:inline-block; }
+
+  /* ===== 題組內容（題數／縮圖／題目／答案）欄寬比例 ===== */
+  #itemModal thead th:nth-child(1), #itemModal tbody td:nth-child(1){ width: 12%; text-align: center; }  /* 題數 */
+  #itemModal thead th:nth-child(2), #itemModal tbody td:nth-child(2){ width: 24%; text-align: center; }  /* 縮圖 */
+  #itemModal thead th:nth-child(3), #itemModal tbody td:nth-child(3){ width: 44%; }                      /* 題目 */
+  #itemModal thead th:nth-child(4), #itemModal tbody td:nth-child(4){ width: 20%; text-align: right; }   /* 答案 */
+
+  /* 題目文字可漂亮換行，不撐寬 */
+  #itemModal tbody td:nth-child(3){
+    word-break: break-word;
+    line-height: 1.4;
+  }
+
+  /* 縮圖在小螢幕略縮 */
+  #itemModal img{
+    width: 60px;
+    height: 44px;
+    object-fit: cover;
+  }
+      .main {
+        margin-left: 0;
+        padding: calc(60px + env(safe-area-inset-top,0px)) 16px 90px;
+      }
+
+      /* 側欄抽屜（同 frontpage） */
+      .sidebar{ transform: translateX(-105%); transition: transform .25s ease; width:82vw; max-width:340px; z-index:9999; }
+      .sidebar.is-open{ transform: translateX(0); }
+      .mobile-toggle{ position:fixed; top:max(10px, env(safe-area-inset-top,10px)); left:12px; z-index:10001; background:#fff; color:#111; border:1px solid var(--line); border-radius:12px; padding:10px 14px; box-shadow:var(--shadow); font-size:15px; line-height:1; }
+      .sb-scrim{ position:fixed; inset:0; background:rgba(0,0,0,.35); opacity:0; visibility:hidden; transition:opacity .2s ease; z-index:9998; }
+      .sb-scrim.is-show{ opacity:1; visibility:visible; }
+        .sidebar{ display:flex; flex-direction:column; }
+
+  /* 可捲動區：多留底部空間，避免被黏底的 footer 蓋住 */
+  .sidebar-scroll{
+    overflow-y:auto; 
+    padding-right:4px;
+    padding-bottom: calc(70px + env(safe-area-inset-bottom, 0px)); /* ⬅ 重要 */
+    flex:1;
+  }
+      /* ✅ 關鍵修復：讓表格填滿、可換行、欄寬比例固定 */
+      table{
+        display:table;            /* 不用 block，避免被撐出右側空白 */
+        table-layout:fixed;       /* 固定欄寬，避免「查看題組」太窄或太寬 */
+        overflow:visible;         /* 不需要水平捲軸 */
+        white-space:normal;       /* 允許換行 */
+        border-radius:12px;
+      }
+      thead th, tbody td{ text-align:left; }
+      /* 欄位比例：用戶 40%｜狀態 40%｜查看 20% */
+      thead th:nth-child(1), tbody td:nth-child(1){ width:40%; }
+      thead th:nth-child(2), tbody td:nth-child(2){ width:40%; }
+      thead th:nth-child(3), tbody td:nth-child(3){ width:20%; text-align:right; }
+
+      /* 讓狀態字可以漂亮換行、不撐出空白 */
+      td:nth-child(2){ word-break:break-word; line-height:1.4; }
+
+      /* 讓按鈕貼右且不超出 */
+      .tool-btn{ width:auto; max-width:100%; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 手機遮罩與漢堡鍵（與 frontpage 一致） -->
+  <div class="sb-scrim" hidden></div>
+  <button class="mobile-toggle" type="button" style="display:none;">☰ 選單</button>
+
+  <!-- ====== 側邊欄（與 frontpage 的區塊/連結/高亮規則一致） ====== -->
+  <div class="sidebar">
+    <div class="sidebar-scroll">
+      <div class="admin-label">管理員Admin</div>
+
+      <!-- 儀表板 -->
+      <div class="section">
+        <div class="section-label">儀表板 ▾</div>
+        <div class="submenu">
+          <a class="submenu-link" href="{{ url_for('admin.frontpage') }}" data-page="/ADMIN/frontpage.html">數據總覽</a>
+        </div>
+      </div>
+
+      <!-- 用戶資訊 -->
+      <div class="section">
+        <div class="section-label">用戶資訊 ▾</div>
+        <div class="submenu">
+          <a class="submenu-link" href="{{ url_for('admin.user_information') }}" data-page="/ADMIN/Userinformation.html">帳號管理</a>
+          <a class="submenu-link" href="{{ url_for('admin.page_answer_records') }}" data-page="/ADMIN/answer-records.html">答題紀錄</a>
+          <a class="submenu-link" href="{{ url_for('admin.add_user') }}" data-page="/ADMIN/add-user.html">自訂題目</a>
+        </div>
+      </div>
+
+      <!-- 題庫管理 -->
+      <div class="section">
+        <div class="section-label">題庫管理 ▾</div>
+        <div class="submenu">
+          <a class="submenu-link" href="{{ url_for('ai.page_question') }}" data-page="/ADMIN/Question.html">上傳題目</a>
+          <a class="submenu-link" href="{{ url_for('ai.page_picture_question') }}" data-page="/ADMIN/Picture-question.html">圖片題庫</a>
+          <a class="submenu-link" href="{{ url_for('ai.page_gif_question') }}" data-page="/ADMIN/GIF-question.html">動圖題庫</a>
+          <a class="submenu-link" href="{{ url_for('ai.page_situation_question') }}" data-page="/ADMIN/Situation-question.html">情境題庫</a>
+        </div>
+      </div>
+
+      <!-- 登出 -->
+      <button class="logout-button" onclick="location.href='{{ url_for('admin.logout') }}'">登出帳戶</button>
+    </div>
+  </div>
+
+  <!-- ====== 主內容（原本邏輯與 DOM 保持不變） ====== -->
+  <div class="main">
+    <h1>自訂題庫管理</h1>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin:10px 0 20px;">
+      <div></div>
+      <div class="search-bar">🔍
+        <input id="kw" type="text" placeholder="搜尋用戶姓名..." />
+      </div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th style="text-align:left;padding-left:18px;">用戶</th>
+          <th>狀態</th>
+          <th>查看題組</th>
+        </tr>
+      </thead>
+      <tbody id="user-tbody">
+        <tr><td colspan="3" style="padding:20px;color:#64748b;">載入中…</td></tr>
+      </tbody>
+    </table>
+    <div class="pager" id="pager"></div>
+  </div>
+
+  <!-- 題組 Modal -->
+  <div id="setModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:1000; align-items:center; justify-content:center;">
+    <div style="background:#fff; width:92%; max-width:1000px; max-height:90vh; overflow:auto; border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,.2);">
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:14px 18px; background:#98d4ff; border-radius:10px 10px 0 0; font-weight:700;">
+        <div>題組列表 — <span id="setUserName"></span></div>
+        <button onclick="closeSetModal()" style="background:none;border:none;font-size:22px;cursor:pointer;">×</button>
+      </div>
+      <div style="padding:16px 18px;">
+        <table style="width:100%; border-collapse:collapse; text-align:center;">
+          <thead>
+            <tr><th>題組名字</th><th>答題次數</th><th>答題正確率</th><th>查看詳情</th></tr>
+          </thead>
+          <tbody id="setBody">
+            <tr><td colspan="4" style="padding:20px;color:#64748b;">載入中…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 題目 Modal（第一欄改「題數」1..N） -->
+  <div id="itemModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:1000; align-items:center; justify-content:center;">
+    <div style="background:#fff; width:92%; max-width:1000px; max-height:90vh; overflow:auto; border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,.2);">
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:14px 18px; background:#98d4ff; border-radius:10px 10px 0 0; font-weight:700;">
+        <div>題組內容 — <span id="itemSetTitle"></span></div>
+        <button onclick="closeItemModal()" style="background:none;border:none;font-size:22px;cursor:pointer;">×</button>
+      </div>
+      <div style="padding:16px 18px;">
+        <table style="width:100%; border-collapse:collapse; text-align:center;">
+          <thead>
+            <tr><th>題數</th><th>縮圖</th><th>題目</th><th>答案</th></tr>
+          </thead>
+          <tbody id="itemBody">
+            <tr><td colspan="4" style="padding:20px;color:#64748b;">載入中…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ====== 手機抽屜與自動高亮（與 frontpage 相同邏輯） ====== */
+    (function(){
+      const sb = document.querySelector('.sidebar');
+      const mobileBtn = document.querySelector('.mobile-toggle');
+      const scrim = document.querySelector('.sb-scrim');
+      const mq = window.matchMedia('(max-width: 768px)');
+
+      const showToggle = ()=> { mobileBtn.style.display = mq.matches ? 'inline-block' : 'none'; };
+      const openSidebar = (open)=> {
+        if(open){ sb.classList.add('is-open'); if(scrim){ scrim.classList.add('is-show'); scrim.removeAttribute('hidden'); } }
+        else { sb.classList.remove('is-open'); if(scrim){ scrim.classList.remove('is-show'); scrim.setAttribute('hidden',''); } }
+      };
+
+      mq.addEventListener('change', ()=>{ showToggle(); if(!mq.matches){ openSidebar(false); }});
+      showToggle();
+
+      mobileBtn.addEventListener('click', (e)=>{ e.stopPropagation(); const willOpen = !sb.classList.contains('is-open'); openSidebar(willOpen); });
+      scrim?.addEventListener('click', ()=> openSidebar(false));
+      document.querySelector('.main')?.addEventListener('click', ()=> openSidebar(false));
+
+      // 自動高亮：比對 pathname 與 data-page
+      const path = location.pathname;
+      document.querySelectorAll('.submenu-link').forEach(a=>{
+        const dp = a.getAttribute('data-page') || '';
+        const href = a.getAttribute('href') || '';
+        if( (dp && path.endsWith(dp)) || (href && href !== '#' && path === href) ){
+          a.classList.add('is-active');
+        }
+      });
+    })();
+
+    /* ====== 你的原本資料串接與功能邏輯：完全保留 ====== */
+    var API_USERS = "/admin/api/users";
+    var API_SETS  = "/ai/custom/api/customset/list";
+    var API_ITEMS = "/ai/custom/api/custom/items";
+
+    var allUsers = [], pageSize=20, currentPage=1;
+    var setsCache = {};   // user_id -> [{set_id,set_title,set_count,correct_rate}, ...]
+    var countCache = {};  // user_id -> 數量
+
+    function safe(v){ return (v==null ? "" : String(v)); }
+    function safeAvatarPath(av){ if(!av){return "/static/avatars/1.png";} av=String(av); return av.indexOf("/")===0?av:("/static/"+av); }
+
+    function ensureUserStatus(user_id){
+      var cell = document.getElementById('status-'+user_id);
+      if (!cell) return;
+      if (countCache[user_id] != null){
+        var n = countCache[user_id];
+        cell.textContent = n>0 ? ('該用戶共建立 '+n+' 個題組') : '此用戶尚未建立題組';
+        return;
+      }
+      cell.textContent = '查詢中…';
+      fetch(API_SETS+'?user_id='+encodeURIComponent(user_id))
+        .then(res=>res.json().then(j=>({ok:res.ok,data:j})))
+        .then(r=>{
+          if(!r.ok){ throw new Error(safe(r.data && r.data.error)); }
+          var list = Array.isArray(r.data)? r.data : [];
+          setsCache[user_id] = list;
+          var n = list.length|0;
+          countCache[user_id] = n;
+          cell.textContent = n>0 ? ('該用戶共建立 '+n+' 個題組') : '此用戶尚未建立題組';
+        })
+        .catch(e=>{
+          cell.innerHTML = '<span style="color:#b91c1c">讀取失敗</span>';
+        });
+    }
+
+    function renderUserRows(){
+      var kw = safe(document.getElementById("kw").value).toLowerCase();
+      var filtered = allUsers.filter(u => !kw || safe(u.name).toLowerCase().includes(kw));
+
+      var totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+      if(currentPage > totalPages) currentPage = totalPages;
+      var start = (currentPage - 1) * pageSize;
+      var slice = filtered.slice(start, start + pageSize);
+
+      var html = "";
+      for (var u of slice){
+        var avatar = safeAvatarPath(u.avatar);
+        html += ''
+          + '<tr>'
+          + '  <td style="text-align:left;padding-left:18px;">'
+          + '    <div style="display:flex;align-items:center;gap:10px;">'
+          + '      <img src="'+avatar+'" style="width:38px;height:38px;border-radius:50%;object-fit:cover;border:1px solid #eee;background:#fafafa;">'
+          + '      <div style="font-weight:700">'+(safe(u.name)||"(未命名)")+'</div>'
+          + '    </div>'
+          + '  </td>'
+          + '  <td id="status-'+Number(u.user_id)+'">—</td>'
+          + '  <td><button class="tool-btn" onclick="openSetModal('+Number(u.user_id)+', \''+safe(u.name).replace(/'/g,"\\'")+'\')">查看題組</button></td>'
+          + '</tr>';
+      }
+
+      document.getElementById("user-tbody").innerHTML =
+        html ? html : '<tr><td colspan="3" style="padding:20px;color:#64748b;">沒有符合條件的用戶</td></tr>';
+
+      for (var u of slice){ ensureUserStatus(Number(u.user_id)); }
+
+      var pager = document.getElementById("pager");
+      var phtml = '<button onclick="if(currentPage>1){currentPage--;renderUserRows();}">◀</button>';
+      for (var p=1;p<=totalPages;p++){
+        phtml += '<button '+(p===currentPage?'class="active"':'')+' onclick="currentPage='+p+';renderUserRows();">'+p+'</button>';
+      }
+      phtml += '<button onclick="if(currentPage<'+totalPages+'){currentPage++;renderUserRows();}">▶</button>';
+      pager.innerHTML = phtml;
+    }
+
+    function loadUsers(){
+      var tb = document.getElementById('user-tbody');
+      tb.innerHTML = '<tr><td colspan="3" style="padding:20px;color:#64748b;">載入中…</td></tr>';
+      fetch(API_USERS, {credentials:'include'})
+        .then(res=>res.json().then(j=>({ok:res.ok,data:j})))
+        .then(r=>{
+          if(!r.ok){ throw new Error(safe(r.data && r.data.error)); }
+          var arr = (r.data && r.data.data) ? r.data.data : [];
+          allUsers = Array.isArray(arr) ? arr : [];
+          currentPage = 1;
+          renderUserRows();
+        })
+        .catch(e=>{
+          tb.innerHTML = '<tr><td colspan="3" style="padding:20px;color:#b91c1c;">讀取失敗：'+safe(e.message||e)+'</td></tr>';
+        });
+    }
+
+    document.getElementById('kw').addEventListener('input', function(){ currentPage = 1; renderUserRows(); });
+
+    function closeSetModal(){ document.getElementById('setModal').style.display='none'; }
+    function fmtRate(r){ if(r===null||r===undefined||r==='') return '—'; var pct=Math.round(Number(r)*100); return isNaN(pct)?'—':(pct+'%'); }
+    function openSetModal(user_id, user_name){
+      document.getElementById('setUserName').textContent = user_name || '';
+      const body = document.getElementById('setBody');
+      document.getElementById('setModal').style.display='flex';
+
+      const renderList = (list)=>{
+        let html='';
+        for (let s of list){
+          html += '<tr>'
+            + '<td style="text-align:left">'+safe(s.set_title||'(未命名)')+'</td>'
+            + '<td>'+(s.set_count==null?0:s.set_count)+'</td>'
+            + '<td>'+fmtRate(s.correct_rate)+'</td>'
+            + '<td><span style="color:#2563eb;cursor:pointer" onclick="openItemModal('+Number(s.set_id)+', \''+safe(s.set_title).replace(/\'/g,"\\'")+'\')">查看詳情</span></td>'
+            + '</tr>';
+        }
+        body.innerHTML = html || '<tr><td colspan="4" style="padding:20px;color:#64748b;">此用戶尚未建立題組</td></tr>';
+      };
+
+      if (setsCache[user_id]){
+        renderList(setsCache[user_id]);
+      }else{
+        body.innerHTML = '<tr><td colspan="4" style="padding:20px;color:#64748b;">載入中…</td></tr>';
+      }
+
+      fetch(API_SETS+'?user_id='+encodeURIComponent(user_id))
+        .then(res=>res.json().then(j=>({ok:res.ok,data:j})))
+        .then(r=>{
+          if(!r.ok) throw new Error(safe(r.data && r.data.error));
+          const list = Array.isArray(r.data)? r.data : [];
+          setsCache[user_id] = list;
+          countCache[user_id] = list.length|0;
+          renderList(list);
+          ensureUserStatus(user_id);
+        })
+        .catch(e=>{
+          body.innerHTML = '<tr><td colspan="4" style="padding:20px;color:#b91c1c;">讀取失敗：'+safe(e.message||e)+'</td></tr>';
+        });
+    }
+
+    function closeItemModal(){ document.getElementById('itemModal').style.display='none'; }
+    function normMedia(url){
+      if(!url) return '';
+      if(url.indexOf('/ai/custom/uploads/')===0) return url;
+      if(url.indexOf('/custom/uploads/')===0) return '/ai'+url;
+      if(url.indexOf('/uploads/')===0) return '/ai/custom'+url;
+      return url;
+    }
+    function openItemModal(set_id, set_title){
+      document.getElementById('itemSetTitle').textContent = set_title || '';
+      const body = document.getElementById('itemBody');
+      body.innerHTML = '<tr><td colspan="4" style="padding:20px;color:#64748b;">載入中…</td></tr>';
+      document.getElementById('itemModal').style.display='flex';
+
+      fetch(API_ITEMS+'?set_id='+encodeURIComponent(set_id))
+        .then(res=>res.json().then(j=>({ok:res.ok,data:j})))
+        .then(r=>{
+          if(!r.ok) throw new Error(safe(r.data && r.data.error));
+          const list = Array.isArray(r.data)? r.data : [];
+          let html='';
+          for (let i=0;i<list.length;i++){
+            const it=list[i];
+            const img=normMedia(safe(it.c_media_url).trim());
+            const thumb = img
+              ?('<img src="'+img+'" style="width:68px;height:48px;border-radius:6px;object-fit:cover;border:1px solid #e5e7eb;background:#e5e7eb;">')
+              :('<div style="width:68px;height:48px;border-radius:6px;border:1px solid #e5e7eb;background:#f1f5f9;display:flex;align-items:center;justify-content:center;color:#64748b;">無</div>');
+            html += '<tr>'
+              + '<td>'+(i+1)+'</td>'
+              + '<td>'+thumb+'</td>'
+              + '<td style="text-align:left">'+safe(it.c_text).replace(/</g,'&lt;')+'</td>'
+              + '<td>'+safe(it.c_answer)+'</td>'
+              + '</tr>';
+          }
+          body.innerHTML = html || '<tr><td colspan="4" style="padding:20px;color:#64748b;">此題組沒有題目</td></tr>';
+        })
+        .catch(e=>{
+          body.innerHTML = '<tr><td colspan="4" style="padding:20px;color:#b91c1c;">讀取失敗：'+safe(e.message||e)+'</td></tr>';
+        });
+    }
+
+    // 初始化
+    (function(){ loadUsers(); })();
+  </script>
+</body>
+</html>

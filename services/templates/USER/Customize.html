@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>自訂題庫首頁</title>
+  <link href="https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      margin: 0;
+      font-family: 'ZCOOL KuaiLe', "微軟正黑體", sans-serif;
+      background-color: #ffffff;
+      background-image: url('{{ url_for("static", filename="7.png") }}');
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-attachment: fixed;
+      overflow-x: hidden;
+    }
+    .navbar {
+      background: linear-gradient(to top, rgba(230, 230, 230, 0), rgb(182, 240, 245));
+      padding: 30px 24px;
+      display: flex; justify-content: space-between; align-items: center;
+      position: sticky; top: 0; z-index: 1000;
+    }
+    .logo { font-size: 50px; font-weight: bold; color: #603d2b; cursor: pointer; text-decoration: none; }
+    .nav-links { display: flex; align-items: center; gap: 30px; }
+    .nav-links a { text-decoration: none; font-size: 21px; font-weight: bold; color: #603d2b; }
+    .login-out { background-color: white; border: 2px solid #999; border-radius: 30px; padding: 8px 20px; cursor: pointer; font-weight: bold; }
+
+    .main {
+      display: flex;
+      justify-content: flex-start;
+      align-items: center;
+      padding: 60px 20px;
+      min-height: 70vh;
+    }
+    .button-column {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      margin-left: 180px;
+    }
+    .btn {
+      padding: 14px 36px;
+      font-size: 25px; font-weight: bold;
+      border: none; border-radius: 50px;
+      background-color: #f3b340; color: white;
+      cursor: pointer; min-width: 240px; text-align: center;
+      text-decoration: none; display: inline-block;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+    /* 打開彈窗時，禁止背景滾動 */
+    body.no-scroll{ overflow: hidden; }
+
+    /* 導覽列設定按鈕（與 User_Home 一致） */
+    .nav-settings{
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 44px; height: 44px; border-radius: 12px; border: 2px solid #c9b9a8;
+      background: #fff9e8; cursor: pointer; transition: all .2s ease;
+      box-shadow: 0 6px 12px rgba(0,0,0,.06);
+    }
+    .nav-settings:hover{ background:#fbe1a8; transform: translateY(-1px); }
+
+    /* === 系統設定 Modal（保持原有功能不變） === */
+    .sysset-modal{
+      position: fixed; inset: 0; background: rgba(0,0,0,.35);
+      display: none; align-items: center; justify-content: center;
+      z-index: 2000; padding: 18px;
+    }
+    .sysset-modal[aria-hidden="false"]{ display: flex; }
+    .sysset-dialog{
+      width: min(720px, 92vw);
+      background: #fffef8; border: 2px solid #f3deb7; border-radius: 18px;
+      box-shadow: 0 24px 60px rgba(0,0,0,.22);
+      overflow: hidden; animation: sysset-pop .12s ease-out;
+    }
+    @keyframes sysset-pop{ from{ transform: scale(.98); opacity:.5 } to{ transform: scale(1); opacity:1 } }
+    .sysset-header{
+      display:flex; align-items:center; justify-content:space-between;
+      padding: 14px 16px; background: linear-gradient(180deg,#fff7dc,#fffef6);
+      border-bottom: 1px solid #f0e2c4;
+    }
+    .sysset-header h3{ margin:0; color:#603d2b; font-size:20px; letter-spacing:.5px; }
+    .sysset-close{
+      border:none; background:transparent; cursor:pointer; font-size:20px;
+      padding:6px 10px; border-radius:10px; color:#603d2b;
+    }
+    .sysset-close:hover{ background:#fff0cc; }
+    .sysset-body{ padding: 16px; display:grid; gap:16px; }
+    .sysset-card{
+      background:#ffffff; border: 1px solid #f0e2c4; border-radius:14px;
+      padding:14px; box-shadow: 0 10px 24px rgba(0,0,0,.05);
+    }
+    .sysset-card h4{ margin: 0 0 6px; color:#603d2b; }
+    .sysset-hint{ color:#8b6b55; margin:.25rem 0 .75rem; }
+    .sysset-grid{ display:grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .sysset-grid label{ display:grid; gap:6px; font-size:14px; color:#6b4b35; }
+    .sysset-grid input{
+      padding:10px 12px; border:1px solid #e8d9b8; border-radius:12px; font-size:16px;
+      background:#fffef8;
+    }
+    .sysset-actions{ display:flex; gap:10px; margin-top:8px; }
+    .sysset-primary{
+      background:#f3b340; color:#fff; border:none; border-radius:12px; padding:10px 14px; cursor:pointer;
+      box-shadow: 0 6px 14px rgba(243,179,64,.35);
+    }
+    .sysset-primary:hover{ filter: brightness(1.05); }
+    .sysset-ghost{
+      background:#fff8e6; color:#8b6b35; border:1px solid #f0e2c4; border-radius:12px; padding:10px 14px; cursor:pointer;
+    }
+    .sysset-ghost:hover{ background:#ffefc8; }
+    .sysset-status{ margin-top:8px; font-weight:700; color:#603d2b; }
+    .sysset-slider-row{ display:flex; align-items:center; gap:12px; }
+    .sysset-slider-row input[type="range"]{ width:100%; accent-color:#f3b340; }
+    .sysset-row{ display:flex; align-items:center; gap:12px; margin-top:8px; color:#603d2b; }
+    .sysset-toast{
+      position: fixed; left: 50%; bottom: 100px; transform: translateX(-50%);
+      background:#111827; color:#fff; padding: 10px 14px; border-radius: 10px;
+      box-shadow: 0 10px 24px rgba(0,0,0,.25); z-index: 2001;
+    }
+
+    /* === 手機版（<=768px）專用樣式：與 User_Home.html 一致 === */
+    /* 桌機預設隱藏漢堡、手機選單預設不顯示 */
+    .hamburger{ display:none; }
+    .mobile-menu, .mobile-menu-backdrop{ display:none; }
+    .mobile-menu.active{ display:block; }
+    .mobile-menu-backdrop.active{ display:block; }
+
+    @media (max-width: 768px){
+      body{
+        background-image: url('{{ url_for('static', filename='phone2.jpg') }}') !important;
+        background-size: cover !important;
+        background-position: center bottom !important;
+        background-repeat: no-repeat !important;
+        background-attachment: scroll !important;
+        overflow-x: hidden !important;
+      }
+
+      .navbar{
+        position: fixed !important; top: 0; left: 0; right: 0;
+        padding: 12px 16px !important;
+        background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,255,255,0)) !important;
+        backdrop-filter: blur(2px);
+        z-index: 1200;
+      }
+      .logo{ font-size: 28px !important; }
+
+      /* 手機：上排連結改由漢堡選單承載 */
+      .nav-links{ display: none !important; }
+
+      /* 漢堡按鈕（右上） */
+      .hamburger{
+        display: inline-flex;
+        align-items:center; justify-content:center;
+        width: 44px; height: 44px; border-radius: 12px; border: 2px solid #c9b9a8;
+        background: #fff9e8; cursor: pointer; transition: all .2s ease;
+        box-shadow: 0 6px 12px rgba(0,0,0,.06);
+        z-index: 1400;
+      }
+      .hamburger:hover{ background:#fbe1a8; transform: translateY(-1px); }
+
+      /* 手機下拉選單（與 User_Home 相同） */
+      .mobile-menu{
+        position: fixed; top: 64px; right: 12px;
+        width: min(380px, calc(100dvw - 24px));
+        max-height: calc(100dvh - 88px);
+        overflow-y: auto; overflow-x: hidden;
+        box-sizing: border-box;
+        background: #ffffffee; border: 1px solid #f0e2c4;
+        border-radius: 16px; box-shadow: 0 16px 36px rgba(0,0,0,.18);
+        padding: 8px; z-index: 1300; backdrop-filter: blur(4px);
+        display: none;
+      }
+      .mobile-menu-title{
+        position: sticky; top: 0; background: #fffdf6; color:#603d2b; font-weight: 900;
+        font-size: 18px; letter-spacing: .5px; text-align: center;
+        padding: 12px; margin: -8px -8px 19px; border-top-left-radius: 16px; border-top-right-radius: 16px;
+        box-shadow: inset 0 -1px 0 #f0e2c4; z-index: 1;
+      }
+      .mobile-menu a, .mobile-menu button{
+        display: flex; align-items: center; gap: 10px; width: 100%; box-sizing: border-box;
+        text-align: left; padding: 12px 14px; font-size: 16px; font-weight: 700; color: #603d2b;
+        background: #fff; border: 1px solid #f0e2c4; border-radius: 12px; margin: 6px 0; text-decoration: none;
+        box-shadow: 0 6px 14px rgba(0,0,0,.05); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        justify-content: center; text-align: center; gap: 8px;
+      }
+      .mobile-menu a:active, .mobile-menu button:active{ transform: scale(.99); }
+      .mobile-menu .logout{
+        background: #f3b340 !important; color: #ffffff !important; border: 1px solid #f3b340 !important;
+        box-shadow: 0 6px 14px rgba(243,179,64,.25);
+      }
+      .mobile-menu .logout:hover{ filter: brightness(1.05); }
+
+      /* 背景遮罩 */
+      .mobile-menu-backdrop{
+        position: fixed; inset: 0; background: rgba(0,0,0,.25); z-index: 1250; display: none;
+      }
+
+      /* 主內容置中並騰出固定導覽列空間 */
+      .main{
+        min-height: 100vh !important; display: flex; align-items: center; justify-content: center;
+        padding-top: 72px !important; padding-bottom: 24px !important;
+      }
+      .button-column{
+        margin-left: 0 !important; align-items: center !important; width: 100%; gap: 16px !important;
+        transform: translateY(-120px) !important; will-change: transform;
+      }
+
+      /* Modal 寬度一致 */
+      .sysset-dialog{ width: min(92vw, 640px) !important; }
+      .sysset-grid{ grid-template-columns: 1fr 1fr; }
+      @media (max-width: 420px){ .sysset-grid{ grid-template-columns: 1fr; } }
+    }
+
+    /* 螢幕較高/較矮的手機：微調垂直位置（與你現有邏輯一致） */
+    @media (max-width: 768px) and (min-height: 740px){
+      .button-column{ transform: translateY(-140px) !important; }
+    }
+    @media (max-width: 768px) and (max-height: 660px){
+      .button-column{ transform: translateY(-90px) !important; }
+    }
+  </style>
+</head>
+<body data-logout-url="{{ url_for('auth.logout') }}">
+  <script src="{{ url_for('static', filename='js/parent_timer.js') }}?v=20251025-6"></script>
+
+  <!-- 導覽列 -->
+  <header class="navbar">
+    <a class="logo" href="{{ url_for('auth.home') }}">星星的世界</a>
+
+    <!-- 桌機連結（手機會被隱藏，但節點仍在 DOM，供手機觸發設定用） -->
+    <nav class="nav-links">
+      <a href="{{ url_for('teach.page') }}">星星小教室</a>
+      <a href="{{ url_for('auth.profile_page') }}">星星資料</a>
+      <a href="{{ url_for('learn.learning_process') }}">星星旅程</a>
+      <!-- 既有：系統設定（保持 id 以供手機按鈕觸發） -->
+      <button id="openSettings" class="nav-settings" title="系統設定" aria-label="系統設定">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" stroke="#603d2b" stroke-width="1.8"/>
+          <path d="M19 12a7 7 0 0 0-.07-.98l1.74-1.35-1.8-3.12-2.08.66a7 7 0 0 0-1.7-.98l-.3-2.17h-3.5l-.3 2.17a7 7 0 0 0-1.7.98l-2.08-.66-1.8 3.12L5.07 11A7 7 0 0 0 5 12c0 .33.02.65.07.98l-1.74 1.35 1.8 3.12 2.08-.66c.53 .41 1.1 .74 1.7 .98l.3 2.17h3.5l.3-2.17c.6-.24 1.17-.57 1.7-.98l2.08.66 1.8-3.12L18.93 13c.05-.33.07-.65.07-.98Z" stroke="#603d2b" stroke-width="1.8"/>
+        </svg>
+      </button>
+      <button class="login-out" onclick="location.href='{{ url_for('auth.logout') }}'">登出</button>
+    </nav>
+
+    <!-- 手機：漢堡按鈕（與 User_Home.html 相同） -->
+    <button class="hamburger" id="mobileMenuBtn" aria-label="開啟選單" aria-expanded="false" aria-controls="mobileMenu">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M4 7h16M4 12h16M4 17h16" stroke="#603d2b" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    </button>
+  </header>
+
+  <!-- 手機：下拉選單 + 遮罩（與 User_Home.html 一模一樣） -->
+  <div class="mobile-menu-backdrop" id="mobileMenuBackdrop"></div>
+  <div class="mobile-menu" id="mobileMenu" role="menu" aria-hidden="true">
+    <div class="mobile-menu-title" role="heading" aria-level="1">功能選單</div>
+    <a href="{{ url_for('teach.page') }}" role="menuitem">🌟 星星小教室</a>
+    <a href="{{ url_for('auth.profile_page') }}" role="menuitem">🧒 星星資料</a>
+    <a href="{{ url_for('learn.learning_process') }}" role="menuitem">🗺️ 星星旅程</a>
+    <button type="button" id="mobileOpenSettings" role="menuitem" aria-label="系統設定">⚙️ 系統設定</button>
+    <button type="button" class="logout" id="mobileLogout" role="menuitem">登出</button>
+  </div>
+
+  <div class="main">
+    <div class="button-column">
+      <a class="btn" href="{{ url_for('custom.page_list') }}">挑選我的題庫</a>
+      <a class="btn" href="{{ url_for('custom.page_add') }}">上傳我的題庫</a>
+    </div>
+  </div>
+
+  <!-- 🧩 系統設定 Modal（原樣保留） -->
+  <div id="sysSettingsModal" class="sysset-modal" aria-hidden="true">
+    <div class="sysset-dialog" role="dialog" aria-modal="true" aria-labelledby="sysset-title">
+      <div class="sysset-header">
+        <h3 id="sysset-title">系統設定</h3>
+        <button id="sysSettingsClose" class="sysset-close" aria-label="關閉">✕</button>
+      </div>
+
+      <div class="sysset-body">
+        <!-- ⏱ 使用時間控管 -->
+        <section class="sysset-card">
+          <h4>⏱ 使用時間控管</h4>
+          <p class="sysset-hint">家長可設定時長；倒數前 1 分鐘有語音提醒，時間到會自動登出。</p>
+          <div class="sysset-grid">
+            <label>小時 <input id="timeHours" type="number" min="0" max="12" step="1" value="0"></label>
+            <label>分鐘 <input id="timeMinutes" type="number" min="0" max="720" step="1" value="30"></label>
+          </div>
+          <div class="sysset-actions">
+            <button id="timerStart" class="sysset-primary" type="button" onclick="__uiStartTimer()">開始計時</button>
+            <button id="timerStop"  class="sysset-ghost"  type="button" onclick="__uiStopTimer()" disabled>停止計時</button>
+          </div>
+          <div class="sysset-status">
+            剩餘時間：<span id="timeRemain">未開始</span>
+          </div>
+        </section>
+
+        <!-- 🗣️ 題庫語音播放速度 -->
+        <section class="sysset-card">
+          <h4>🗣️ 題庫語音播放速度</h4>
+          <p class="sysset-hint">調整全站語音朗讀速度（烏龜 ←→ 兔子）。</p>
+          <div class="sysset-slider-row">
+            <div class="sysset-row">
+              <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                <input id="ttsEnabled" type="checkbox"> 啟用題庫語音
+              </label>
+            </div>
+            <span aria-hidden="true">🐢</span>
+            <input id="ttsRate" type="range" min="0.50" max="2.00" step="0.01" inputmode="decimal">
+            <span aria-hidden="true">🐇</span>
+          </div>
+          <div class="sysset-row">
+            目前倍率：<span id="ttsRateLabel">1.0×</span>
+            <button id="ttsTest" class="sysset-ghost">試聽一句</button>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <!-- 全站倒數提醒容器（60s / 30s / 5s 用） -->
+  <div id="sysCenterWarn" class="sysset-center-warn" aria-hidden="true">
+    <div class="sysset-center-box" id="sysCenterWarnBox"></div>
+  </div>
+
+  <!-- 系統設定：開關、語速同步、時間控管（保持與 User_Home 相同邏輯） -->
+  <script>
+  (() => {
+    const $ = s => document.querySelector(s);
+    const openBtn  = $('#openSettings');
+    const modal    = $('#sysSettingsModal');
+    const closeBtn = $('#sysSettingsClose');
+
+    const inputH   = $('#timeHours');
+    const inputM   = $('#timeMinutes');
+    const btnStart = $('#timerStart');
+    const btnStop  = $('#timerStop');
+    const remainEl = $('#timeRemain');
+
+    const rate     = $('#ttsRate');
+    const rateLbl  = $('#ttsRateLabel');
+    const btnTest  = $('#ttsTest');
+    const enabled  = $('#ttsEnabled');
+
+    const logoutUrl = document.body.getAttribute('data-logout-url') || '/logout';
+
+    const openModal  = () => modal.setAttribute('aria-hidden','false');
+    const closeModal = () => modal.setAttribute('aria-hidden','true');
+    openBtn.addEventListener('click', openModal);
+    closeBtn.addEventListener('click', closeModal);
+    modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
+
+    const initRate = () => {
+      let saved = parseFloat(localStorage.getItem('tts.rate'));
+      if (Number.isNaN(saved)) saved = 1.0;
+      saved = Math.min(2, Math.max(0.5, saved));
+      rate.value = saved.toFixed(2);
+      rateLbl.textContent = saved.toFixed(2) + '×';
+      window.StarSpeech && (window.StarSpeech.rate = saved);
+      localStorage.setItem('tts.rate', saved.toFixed(2));
+    };
+    const initEnabled = () => {
+      const on = (localStorage.getItem('tts.enabled') ?? '1') !== '0';
+      enabled.checked = on;
+      window.StarSpeech && (window.StarSpeech.enabled = on);
+      localStorage.setItem('tts.enabled', on ? '1' : '0');
+    };
+    rate.addEventListener('input', () => {
+      let v = parseFloat(rate.value);
+      if (Number.isNaN(v)) v = 1.0;
+      v = Math.min(2, Math.max(0.5, v));
+      rate.value = v.toFixed(2);
+      rateLbl.textContent = v.toFixed(2) + '×';
+      window.StarSpeech && (window.StarSpeech.rate = v);
+      localStorage.setItem('tts.rate', v.toFixed(2));
+    });
+    enabled.addEventListener('change', () => {
+      const on = !!enabled.checked;
+      window.StarSpeech && (window.StarSpeech.enabled = on);
+      localStorage.setItem('tts.enabled', on ? '1' : '0');
+    });
+    btnTest.addEventListener('click', () => {
+      window.StarSpeech?.speak('這是速度測試。現在的語速是 ' + window.StarSpeech.rate.toFixed(2) + ' 倍。');
+    });
+    initRate(); initEnabled();
+
+    const fmt = (ms) => {
+      if (ms <= 0) return '00:00';
+      const s = Math.floor(ms/1000), m = Math.floor(s/60);
+      return String(m).padStart(2,'0') + ':' + String(s%60).padStart(2,'0');
+    };
+    const refreshRemain = () => {
+      const { active, left } = window.ParentTimer?.status() || {active:false,left:0};
+      remainEl.textContent = active ? fmt(left) : '未開始';
+      btnStart.disabled = active;
+      btnStop.disabled  = !active;
+      if (active && left <= 0) window.location.href = logoutUrl;
+    };
+    btnStart.addEventListener('click', () => {
+      const h = Math.max(0, parseInt(inputH.value || '0', 10));
+      const m = Math.max(0, parseInt(inputM.value || '0', 10));
+      const ms = (h*60 + m) * 60 * 1000;
+      if (ms > 0) ParentTimer.start(ms);
+    });
+    btnStop.addEventListener('click',  () => ParentTimer.stop());
+    setInterval(refreshRemain, 500);
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'timer.active' || e.key === 'timer.endAt') refreshRemain();
+    });
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshRemain(); });
+    refreshRemain();
+  })();
+  </script>
+
+  <script>
+    // 直接讀 UI，呼叫 ParentTimer（保底）
+    function __uiStartTimer(){
+      var h = parseInt(document.getElementById('timeHours')?.value || '0', 10) || 0;
+      var m = parseInt(document.getElementById('timeMinutes')?.value || '0', 10) || 0;
+      var ms = (h * 60 + m) * 60000;
+      if (ms <= 0) { alert('請輸入大於 0 的時間'); return; }
+      if (window.ParentTimer && typeof window.ParentTimer.start === 'function') {
+        window.ParentTimer.start(ms);
+      } else {
+        console.error('ParentTimer 尚未就緒'); alert('計時器未就緒，請重新整理頁面');
+      }
+    }
+    function __uiStopTimer(){
+      if (window.ParentTimer && typeof window.ParentTimer.stop === 'function') {
+        window.ParentTimer.stop();
+      }
+    }
+  </script>
+
+  <!-- 手機：漢堡選單控制（與 User_Home.html 相同實作） -->
+  <script>
+  (function(){
+    const btn = document.getElementById('mobileMenuBtn');
+    const menu = document.getElementById('mobileMenu');
+    const backdrop = document.getElementById('mobileMenuBackdrop');
+    const logoutUrl = document.body.getAttribute('data-logout-url') || '/logout';
+    const openSettingsBtn = document.getElementById('openSettings');
+    const mobileOpenSettings = document.getElementById('mobileOpenSettings');
+    const mobileLogout = document.getElementById('mobileLogout');
+
+    // 媒體查詢：只在手機寬度顯示漢堡鈕；離開手機寬度時自動關閉選單
+    const mq = window.matchMedia('(max-width: 768px)');
+    function syncBurger(){
+      const show = mq.matches;
+      if (btn) btn.style.display = show ? 'inline-flex' : 'none';
+      if(!show){
+        menu.classList.remove('active');
+        backdrop.classList.remove('active');
+        btn?.setAttribute('aria-expanded','false');
+        menu.setAttribute('aria-hidden','true');
+      }
+    }
+    syncBurger();
+    mq.addEventListener('change', syncBurger);
+
+    function toggleMenu(force){
+      const willOpen = (force === true) || (force !== false && !menu.classList.contains('active'));
+      menu.classList.toggle('active', willOpen);
+      backdrop.classList.toggle('active', willOpen);
+      btn?.setAttribute('aria-expanded', String(willOpen));
+      menu.setAttribute('aria-hidden', String(!willOpen));
+    }
+    btn?.addEventListener('click', ()=>toggleMenu());
+    backdrop.addEventListener('click', ()=>toggleMenu(false));
+
+    // 手機：開啟系統設定（呼叫既有節點的 click）
+    mobileOpenSettings.addEventListener('click', ()=>{ toggleMenu(false); openSettingsBtn?.click(); });
+
+    // 手機：登出
+    mobileLogout.addEventListener('click', ()=>{ toggleMenu(false); location.href = logoutUrl; });
+
+    // Esc 關閉
+    document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape' && menu.classList.contains('active')) toggleMenu(false); });
+  })();
+  </script>
+</body>
+</html>

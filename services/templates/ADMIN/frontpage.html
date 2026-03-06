@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>管理員介面｜數據統計版</title>
+  <style>
+    * { box-sizing: border-box; }
+    :root{
+      --sb-bg:#1f2937; --sb-bg-hover:#374151; --sb-text:#e5e7eb; --sb-muted:#9ca3af;
+      --bg:#f2f2f2; --card:#ffffff; --muted:#8b8b8b; --line:#e8e8e8; --primary:#3b82f6;
+      --success:#16a34a; --warning:#f59e0b; --danger:#ef4444; --shadow:0 6px 18px rgba(0,0,0,.06); --radius:14px;
+    }
+    body { margin:0; font-family: "Arial","微軟正黑體",sans-serif; background-color: var(--bg); color:#111; }
+
+      /* 1) 側欄上下多一點空、內容區可滾到底又不貼底 */
+    .sidebar {
+      width:260px; background:var(--sb-bg); color:var(--sb-text);
+      height:100vh; padding:24px 16px;      /* ⬅ 上下變 24px */
+      position:fixed; display:flex; flex-direction:column;
+      box-shadow: 0 0 0 1px rgba(255,255,255,.04) inset, var(--shadow);
+    }
+    .sidebar-scroll{
+      overflow-y:auto; overflow-x:hidden; padding-right:4px;
+      padding-bottom:16px;                  /* ⬅ 底部留空，避免最後一項貼底 */
+      flex:1;
+    }
+
+    /* 2) 標題「管理員」上下間距大一點 */
+    .admin-label{
+      text-align:center; font-weight:800;
+      font-size:16px; letter-spacing:.5px; color:var(--sb-text);
+      margin:12px 2px 18px;                 /* ⬅ 原本 8/16，改 12/18 */
+    }
+
+    /* 3) 區塊標題靠左（保留 ▾） */
+    .section{ margin:10px 0 14px; padding-top:6px; border-top:1px solid rgba(255,255,255,.06); }
+    .section:first-of-type{ border-top:none; margin-top:4px; }
+    .section-label{
+      text-align:left;                      /* ⬅ 改靠左 */
+      color:var(--sb-muted);
+      font-weight:700; font-size:13px; letter-spacing:.6px;
+      padding:6px 6px; margin-bottom:6px;
+      user-select:none;
+    }
+
+    /* 4) 子選單：左邊放「照片圖示」+ 文字靠左 */
+    .submenu{ display:flex; flex-direction:column; gap:8px; }
+    .submenu-link, .submenu-item{
+      display:flex; align-items:center; gap:10px;    /* ⬅ 橫向排版 */
+      text-decoration:none; text-align:left;         /* ⬅ 文字靠左 */
+      padding:10px 12px; font-size:13px; border-radius:10px;
+      color:var(--sb-text); background:transparent;
+      border:1px solid rgba(255,255,255,.12); transition:.15s;
+    }
+    .submenu-link:hover{ background:var(--sb-bg-hover); border-color:rgba(255,255,255,.18); }
+    .submenu-item{ opacity:.6; cursor:not-allowed; }
+
+    /* 5) 照片圖示（用 .jpg/.png 等真實小縮圖） */
+    .menu-icon{
+      width:18px; height:18px; flex:0 0 18px;
+      object-fit:cover; border-radius:4px;
+      box-shadow:0 0 0 1px rgba(255,255,255,.25) inset;
+    }
+    /* 6) 當前頁高亮：純色藍（不使用漸層） */
+    .submenu-link.is-active{
+      position: relative;
+      background:#257beb;                /* 藍-600，和整體風格很搭 */
+      border-color:#257beb;
+      color:#fff;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.12);
+    }
+    .submenu-link.is-active::before{
+      content:"";
+      position:absolute; left:-12px; top:8px; bottom:8px; width:4px;
+      background:#3b82f6;               /* 藍-500，做細窄重點條 */
+      border-radius:4px;
+    }
+    .submenu-link.is-active:hover{
+      background:#1d4ed8;               /* 藍-700，滑過時略深一階 */
+      border-color:#1d4ed8;
+    }
+
+    /* 7) 側欄底部區（放登出），確保真的貼底並留空 */
+    .sidebar-footer{
+      margin-top:auto; padding-top:14px; padding-bottom:6px;
+      border-top:1px solid rgba(255,255,255,.06);
+    }
+    .logout-button{
+      width:100%; margin:12px 0 6px; padding:9px 10px; border-radius:9px; font-size:13px;
+      text-align:center; background:rgba(239,68,68,.10); color:#ef4444;
+      border:1px solid rgba(239,68,68,.35); cursor:pointer; transition:.15s;
+    }
+    .logout-button:hover{ background:rgba(239,68,68,.18); border-color:rgba(239,68,68,.5); }
+
+    /* 主內容（桌機不動） */
+    .main { margin-left:260px; padding:28px 32px 60px; }
+
+    .btn{ appearance:none; border:1px solid var(--line); background:#fff; padding:8px 12px; border-radius:10px; cursor:pointer; font-size:14px; box-shadow:var(--shadow); }
+    .btn-toggle{ border:1px solid var(--line); background:#fff; padding:8px 12px; border-radius:999px; }
+    .btn-toggle .opt{ padding:6px 12px; border-radius:999px; }
+    .btn-toggle .opt.active{ background:#111; color:#fff; }
+
+    .top-search { display:flex; align-items:center; justify-content:flex-end; gap:6px; margin-bottom:14px; }
+    .top-search input{ border:none; padding:10px 18px; border-radius:30px; background-color:#e9e9e9; width:240px; font-size:14px; }
+
+    .kpi-grid{ display:grid; grid-template-columns: repeat(3, minmax(180px,1fr)); gap:16px; margin:12px 0 24px; }
+    .kpi{ background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:16px; box-shadow:var(--shadow); display:flex; gap:12px; align-items:center; }
+    .kpi .icon{ width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:18px; color:#fff; }
+    .kpi .meta{ flex:1; }
+    .kpi .label{ font-size:13px; color:#666; }
+    .kpi .value{ font-size:24px; font-weight:700; margin-top:4px; }
+    .trend{ display:none; }
+
+    .content-grid{ display:grid; grid-template-columns: 1.5fr .7fr; gap:18px; align-items:start; }
+    .card{ background:var(--card); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px; }
+    .card .card-title{ font-size:16px; font-weight:700; margin:6px 0 12px; }
+    .chart-header{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px; }
+    .chart-legend{ font-size:12px; color:#666; display:flex; align-items:center; gap:12px; }
+    .legend-dot{ display:inline-block; width:10px; height:10px; border-radius:50%; background:var(--primary); }
+    .chart-wrap{ width:100%; aspect-ratio: 16/7; background:#fff; border:1px dashed #f1f1f1; border-radius:12px; overflow:hidden; }
+    svg{ width:100%; height:100%; display:block; }
+
+    .side-stat .stat { display:none; }
+
+    .main-header { text-align: center; margin: 40px 0 30px; }
+    .main-header h1 { font-size: 32px; font-weight: 900; }
+    .card-container { display: flex; justify-content: center; gap: 32px; flex-wrap: wrap; }
+    .card-container .card { width: 240px; height: 220px; background-color: #eaeaea; border-radius: 16px; text-align: center; padding: 30px 20px; text-decoration: none; color: black; box-shadow: 0 2px 6px rgba(0,0,0,0.1); transition: background-color 0.2s, transform 0.2s; font-weight: 500; }
+    .card-container .card:hover { background-color: #dcdcdc; transform: translateY(-4px); }
+    .card-container .card h2 { font-weight: bold; font-size: 26px; margin-bottom: 20px; }
+    .card-container .card p { font-size: 16px; color: #333; margin: 6px 0; }
+
+  @media (max-width: 768px) {
+  /* 內容區往下讓出上方漢堡鍵空間，左右縮小邊距 */
+  .main {
+    margin-left: 0;
+    padding: calc(60px + env(safe-area-inset-top,0px)) 16px 90px; /* 上：漢堡鍵高度 + 安全區；下：預留工具列 */
+  }
+
+  /* 手機：側欄改成抽屜 + 遮罩 */
+  .sidebar{
+    transform: translateX(-105%);
+    transition: transform .25s ease;
+    width: 82vw; max-width: 340px; z-index: 9999;
+  }
+  .sidebar.is-open{ transform: translateX(0); }
+        .sidebar{ display:flex; flex-direction:column; }
+
+  /* 可捲動區：多留底部空間，避免被黏底的 footer 蓋住 */
+  .sidebar-scroll{
+    overflow-y:auto; 
+    padding-right:4px;
+    padding-bottom: calc(70px + env(safe-area-inset-bottom, 0px)); /* ⬅ 重要 */
+    flex:1;
+  }
+  .mobile-toggle{
+    position: fixed;
+    top: max(10px, env(safe-area-inset-top,10px));
+    left: 12px; z-index: 10001;
+    background:#ffffff; color:#111;
+    border:1px solid var(--line); border-radius:12px;
+    padding:10px 14px; box-shadow:var(--shadow);
+    font-size:15px; line-height:1;
+  }
+
+  /* 遮罩（打開側欄時出現） */
+  .sb-scrim{
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.35);
+    opacity: 0; visibility: hidden;
+    transition: opacity .2s ease;
+    z-index: 9998;
+  }
+  .sb-scrim.is-show{ opacity: 1; visibility: visible; }
+
+  /* KPI 卡片：單欄排、觸控更好點 */
+  .kpi-grid{ grid-template-columns: 1fr; gap: 12px; margin-top: 8px; }
+  .kpi{ padding:14px; }
+  .kpi .value{ font-size:22px; }
+
+  /* 搜尋列：靠左右彈性，避免擠出螢幕 */
+  .top-search{ justify-content: center; gap:8px; }
+  .top-search input{ width: auto; min-width: 0; flex: 1; }
+
+  /* 主圖表容器：加高一點比較好讀 */
+  .chart-wrap{ aspect-ratio: 16/12; }
+  .card{ padding:14px; }
+  .card .card-title{ font-size:15px; }
+
+  /* 圖表切換與下載：底部固定一塊工具列（不會跟內容衝突） */
+  .chart-controls{
+    position: sticky; bottom: 0;
+    background: var(--bg);
+    padding: 10px 8px 14px;
+    border-top: 1px solid var(--line);
+    display: flex; gap: 10px; flex-wrap: wrap;
+    border-radius: 12px;
+  }
+
+  .btn, .btn-toggle{ font-size:15px; padding:10px 14px; }
+  .btn-toggle .opt{ padding:8px 12px; }
+
+  /* 內容主格：單欄排避免水平捲動 */
+  .content-grid{ grid-template-columns: 1fr; gap: 14px; }
+
+  /* 題庫卡片：滿版寬、間距縮小 */
+  .main-header{ margin: 28px 0 18px; }
+  .card-container{ gap:16px; }
+  .card-container .card{ width: 100%; min-height: 140px; }
+}.chart-week-nav{
+  display:flex; align-items:center; gap:10px;
+}
+.week-nav-btn{
+  appearance:none; border:1px solid var(--line); background:#fff;
+  width:34px; height:34px; border-radius:8px; cursor:pointer; box-shadow:var(--shadow);
+  display:flex; align-items:center; justify-content:center; font-size:16px;
+}
+.week-nav-btn:disabled{ opacity:.4; cursor:not-allowed; }
+.week-label{ font-size:13px; color:#666; min-width:120px; text-align:center; }
+
+  </style>
+</head>
+<body>
+    <div class="sb-scrim" hidden></div>
+ <!-- 手機：漢堡鍵 -->
+  <button class="mobile-toggle" type="button" style="display:none;">☰ 選單</button>
+
+  <!-- 側邊欄 -->
+  <div class="sidebar">
+    <div class="sidebar-scroll">
+      <div class="admin-label">管理員Admin</div>
+
+      <!-- 儀表板（類別標題無外框） -->
+      <div class="section">
+        <div class="section-label">儀表板 ▾</div>
+        <div class="submenu">
+          <a class="submenu-link" href="{{ url_for('admin.frontpage') }}" data-page="/ADMIN/frontpage.html">數據總覽</a>
+        </div>
+      </div>
+
+      <!-- 用戶資訊 -->
+      <div class="section">
+        <div class="section-label">用戶資訊 ▾</div>
+        <div class="submenu">
+          <a class="submenu-link" href="{{ url_for('admin.user_information') }}" data-page="/ADMIN/Userinformation.html">帳號管理</a>
+          <a class="submenu-link" href="{{ url_for('admin.page_answer_records') }}" data-page="/ADMIN/answer-records.html">答題紀錄</a>
+          <a class="submenu-link" href="{{ url_for('admin.add_user') }}" data-page="/ADMIN/add-user.html">自訂題目</a>
+        </div>
+      </div>
+
+      <!-- 題庫管理 -->
+      <div class="section">
+        <div class="section-label">題庫管理 ▾</div>
+        <div class="submenu">
+          <a class="submenu-link" href="{{ url_for('ai.page_question') }}" data-page="/ADMIN/Question.html">上傳題目</a>
+          <a class="submenu-link" href="{{ url_for('ai.page_picture_question') }}" data-page="/ADMIN/Picture-question.html">圖片題庫</a>
+          <a class="submenu-link" href="{{ url_for('ai.page_gif_question') }}" data-page="/ADMIN/GIF-question.html">動圖題庫</a>
+          <a class="submenu-link" href="{{ url_for('ai.page_situation_question') }}" data-page="/ADMIN/Situation-question.html">情境題庫</a>
+        </div>
+      </div>
+
+      <!-- 登出 -->
+      <button class="logout-button" onclick="location.href='{{ url_for('admin.logout') }}'">登出帳戶</button>
+    </div>
+  </div>
+
+ 
+  <!-- 主內容（原本不動） -->
+  <div class="main">
+
+    <div class="top-search">
+      🔍 <input type="text" placeholder="搜尋">
+    </div>
+
+    <!-- KPI：只留 3 張卡 -->
+    <div class="kpi-grid" id="kpiGrid">
+      <div class="kpi">
+        <div class="icon" style="background:#93c5fd;"></div>
+        <div class="meta">
+          <div class="label">總題目數</div>
+          <div class="value" id="kpi-questions">—</div>
+        </div>
+      </div>
+      <div class="kpi">
+        <div class="icon" style="background:#e9d5ff;"></div>
+        <div class="meta">
+          <div class="label">總用戶</div>
+          <div class="value" id="kpi-active">—</div>
+        </div>
+      </div>
+      <div class="kpi">
+        <div class="icon" style="background:#fed7aa;"></div>
+        <div class="meta">
+          <div class="label">總題目回答平均正確率</div>
+          <div class="value" id="kpi-accuracy">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-grid">
+      <div class="card">
+        <div class="chart-header">
+  <div class="card-title" id="chartTitle">系統本週每日回答率</div>
+
+  <div class="chart-week-nav">
+    <button class="week-nav-btn" id="prevWeekBtn" title="上一週" aria-label="上一週">◀</button>
+    <span class="week-label" id="weekLabel">本週</span>
+    <button class="week-nav-btn" id="nextWeekBtn" title="下一週" aria-label="下一週" disabled>▶</button>
+
+    <div class="chart-legend" style="margin-left:8px;">
+      <span class="legend-dot"></span><span id="legendLabel">回答率</span>
+    </div>
+  </div>
+</div>
+
+        <div class="chart-wrap">
+          <svg id="lineChart" viewBox="0 0 800 360" preserveAspectRatio="none" aria-label="折線圖 (SVG)"></svg>
+        </div>
+        <div style="display:flex; gap:8px; margin-top:12px; color:#666; font-size:12px;">
+          <span>提示：上方按鈕可在「回答率」與「註冊人數」間切換。</span>
+        </div>
+      </div>
+
+      <div class="side-stat">
+        <div class="chart-controls">
+          <div class="btn-toggle" id="chartTypeToggle">
+            <button class="opt active" data-type="answerRate">本週回答率</button>
+            <button class="opt" data-type="registrations">本週註冊人數</button>
+          </div>
+          <button class="btn" id="downloadPngBtn">下載圖表</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="main-header">
+      <h1>個別題庫數據總覽</h1>
+    </div>
+    <div class="card-container" id="bankCards">
+      <a href="{{ url_for('ai.page_picture_question') }}" class="card" id="card-picture">
+        <h2>圖片</h2>
+        <p id="pic-total">總題數：—</p>
+        <p id="pic-acc">正確率：—</p>
+      </a>
+      <a href="{{ url_for('ai.page_gif_question') }}" class="card" id="card-gif">
+        <h2>動圖</h2>
+        <p id="gif-total">總題數：—</p>
+        <p id="gif-acc">正確率：—</p>
+      </a>
+      <a href="{{ url_for('ai.page_situation_question') }}" class="card" id="card-scn">
+        <h2>情境</h2>
+        <p id="scn-total">總題數：—</p>
+        <p id="scn-acc">正確率：—</p>
+      </a>
+    </div>
+
+  </div>
+
+  <script>
+    /* RWD：手機漢堡開關 + 自動高亮（不改你的資料邏輯） */
+   (function(){
+  const sb = document.querySelector('.sidebar');
+  const mobileBtn = document.querySelector('.mobile-toggle');
+  const scrim = document.querySelector('.sb-scrim');
+  const mq = window.matchMedia('(max-width: 768px)');
+
+  const showToggle = ()=> { mobileBtn.style.display = mq.matches ? 'inline-block' : 'none'; };
+  const openSidebar = (open)=> {
+    if(open){ sb.classList.add('is-open'); if(scrim){ scrim.classList.add('is-show'); scrim.removeAttribute('hidden'); } }
+    else { sb.classList.remove('is-open'); if(scrim){ scrim.classList.remove('is-show'); scrim.setAttribute('hidden',''); } }
+  };
+
+  mq.addEventListener('change', ()=>{ showToggle(); if(!mq.matches){ openSidebar(false); }});
+  showToggle();
+
+  mobileBtn.addEventListener('click', (e)=>{ e.stopPropagation(); const willOpen = !sb.classList.contains('is-open'); openSidebar(willOpen); });
+  scrim?.addEventListener('click', ()=> openSidebar(false));
+  document.querySelector('.main')?.addEventListener('click', ()=> openSidebar(false));
+
+  // 自動高亮：比對 pathname 與 data-page
+  const path = location.pathname;
+  document.querySelectorAll('.submenu-link').forEach(a=>{
+    const dp = a.getAttribute('data-page') || '';
+    const href = a.getAttribute('href') || '';
+    if( (dp && path.endsWith(dp)) || (href && href !== '#' && path === href) ){
+      a.classList.add('is-active');
+    }
+  });
+})();
+
+
+    /* 你的原本資料綁定邏輯（未改） */
+    const svg = document.getElementById('lineChart');
+let weeklyAnswerRate = [];
+let weeklySignups    = [];
+let weekOffset = 0;  // 0=本週, -1=上週 ...
+function getWeekRangeLabel(offset=0){
+  // 用台灣時區計算顯示範圍（週一~週日）
+  const now = new Date();
+  // 轉到台北時間的「當下」毫秒 (瀏覽器多半就是本地時區，這裡只做近似顯示)
+  const day = now.getDay(); // 0=Sun..6=Sat
+  const diffToMon = (day === 0 ? -6 : 1 - day); // 本週一
+  const mon = new Date(now);
+  mon.setDate(now.getDate() + diffToMon + offset*7);
+  mon.setHours(0,0,0,0);
+  const sun = new Date(mon);
+  sun.setDate(mon.getDate() + 6);
+
+  const pad = n => String(n).padStart(2,'0');
+  const md = (d)=> `${d.getMonth()+1}/${pad(d.getDate())}`;
+  return `${md(mon)}–${md(sun)}`;
+}
+    async function fetchOverview(){
+      try{
+        const r = await fetch('/admin/api/overview', {cache: 'no-store'});
+        if(!r.ok) throw new Error('overview HTTP '+r.status);
+        const j = await r.json();
+        document.getElementById('kpi-questions').textContent = Number(j.total_questions || 0).toLocaleString();
+        document.getElementById('kpi-active').textContent    = Number(j.total_users || 0).toLocaleString();
+        document.getElementById('kpi-accuracy').textContent  = ((j.avg_accuracy_pct ?? 0).toFixed(1)) + '%';
+        const pct = (v)=> ((Number(v||0) * 100).toFixed(1).replace(/\.0$/,'') + '%');
+        document.getElementById('pic-total').textContent = `總題數：${Number(j.image?.count || 0)}`;
+        document.getElementById('pic-acc').textContent   = `正確率：${pct(j.image?.accuracy)}`;
+        document.getElementById('gif-total').textContent = `總題數：${Number(j.gif?.count || 0)}`;
+        document.getElementById('gif-acc').textContent   = `正確率：${pct(j.gif?.accuracy)}`;
+        document.getElementById('scn-total').textContent = `總題數：${Number(j.scene?.count || 0)}`;
+        document.getElementById('scn-acc').textContent   = `正確率：${pct(j.scene?.accuracy)}`;
+      }catch(e){
+        console.error('fetchOverview failed:', e);
+        document.getElementById('kpi-questions').textContent = '0';
+        document.getElementById('kpi-active').textContent = '0';
+        document.getElementById('kpi-accuracy').textContent = '0%';
+      }
+    }
+
+   
+async function fetchWeekly(){
+  try{
+    const qs = `?offset=${weekOffset}`;
+    const [r1, r2] = await Promise.all([
+      fetch('/admin/api/weekly/answer-rate' + qs, {cache:'no-store'}),
+      fetch('/admin/api/weekly/signups'     + qs, {cache:'no-store'}),
+    ]);
+    if(!r1.ok) throw new Error('answer-rate HTTP '+r1.status);
+    if(!r2.ok) throw new Error('signups HTTP '+r2.status);
+    weeklyAnswerRate = await r1.json();
+    weeklySignups    = await r2.json();
+    // 週標籤 & 下一週按鈕狀態（不能超過本週）
+    document.getElementById('weekLabel').textContent = (weekOffset === 0) ? '本週' : getWeekRangeLabel(weekOffset);
+    document.getElementById('nextWeekBtn').disabled = (weekOffset === 0);
+  }catch(e){
+    console.error('fetchWeekly failed:', e);
+    weeklyAnswerRate = [];
+    weeklySignups = [];
+  }
+}
+
+function bindWeekNav(){
+  const prev = document.getElementById('prevWeekBtn');
+  const next = document.getElementById('nextWeekBtn');
+  prev?.addEventListener('click', async ()=>{
+    weekOffset -= 1;     // 上一週
+    await fetchWeekly();
+    // 依目前切換狀態重繪
+    const active = document.querySelector('#chartTypeToggle .opt.active')?.dataset.type || 'answerRate';
+    renderChart(active);
+  });
+  next?.addEventListener('click', async ()=>{
+    if(weekOffset < 0){
+      weekOffset += 1;   // 回下一週，直到 0
+      await fetchWeekly();
+      const active = document.querySelector('#chartTypeToggle .opt.active')?.dataset.type || 'answerRate';
+      renderChart(active);
+    }
+  });
+}
+    function formatMD(dayStr){
+      const d = new Date(dayStr + "T00:00:00");
+      return `${d.getMonth()+1}/${d.getDate()}`;
+    }
+
+    function renderChart(type = 'answerRate'){
+      const svgEl = document.getElementById('lineChart');
+      svgEl.innerHTML = '';
+      const isRate = type === 'answerRate';
+      const series = isRate
+        ? weeklyAnswerRate.map(x => ({label: formatMD(x.day), value: Number(x.rate_pct||0)}))
+        : weeklySignups.map(x => ({label: formatMD(x.day), value: Number(x.signups||0)}));
+      const labels = series.map(s => s.label);
+      const data   = series.map(s => s.value);
+      const title  = isRate ? '系統本週每日回答率' : '本週每日註冊人數（台灣時間）';
+      const legend = isRate ? '回答率' : '註冊人數';
+      document.getElementById('chartTitle').textContent = title;
+      document.getElementById('legendLabel').textContent = legend;
+
+      const W = 800, H = 360, padding = {l:56, r:18, t:18, b:40};
+      const chartW = W - padding.l - padding.r;
+      const chartH = H - padding.t - padding.b;
+
+      const maxData = Math.max(...data, 0);
+      const step = isRate ? 10 : 5;
+      const maxY = Math.ceil((maxData * 1.15) / step) * step;
+      const minY = 0;
+
+      const x = i => padding.l + (series.length<=1 ? 0 : (i/(series.length-1))*chartW);
+      const y = v => padding.t + (1 - (v - minY)/(maxY - minY || 1)) * chartH;
+
+      const defs = document.createElementNS('http://www.w3.org/2000/svg','defs');
+      defs.innerHTML = `
+        <linearGradient id="gradLine" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.38"/>
+          <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.02"/>
+        </linearGradient>
+      `;
+      svgEl.appendChild(defs);
+
+      const gridLines = 5;
+      for(let i=0;i<=gridLines;i++){
+        const gy = padding.t + (i/gridLines)*chartH;
+        const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+        line.setAttribute('x1', padding.l);
+        line.setAttribute('x2', W - padding.r);
+        line.setAttribute('y1', gy);
+        line.setAttribute('y2', gy);
+        line.setAttribute('stroke', '#e9e9e9');
+        svgEl.appendChild(line);
+
+        const val = maxY - (maxY-minY)/gridLines * i;
+        const label = document.createElementNS('http://www.w3.org/2000/svg','text');
+        label.setAttribute('x', padding.l - 10);
+        label.setAttribute('y', gy + 4);
+        label.setAttribute('text-anchor','end');
+        label.setAttribute('fill','#777');
+        label.setAttribute('font-size','12');
+        label.textContent = isRate ? `${Math.round(val)}%` : Math.round(val).toLocaleString();
+        svgEl.appendChild(label);
+      }
+
+      labels.forEach((m, i)=>{
+        const tx = document.createElementNS('http://www.w3.org/2000/svg','text');
+        tx.setAttribute('x', x(i));
+        tx.setAttribute('y', H - 12);
+        tx.setAttribute('text-anchor','middle');
+        tx.setAttribute('fill','#777');
+        tx.setAttribute('font-size','12');
+        tx.textContent = m;
+        svgEl.appendChild(tx);
+      });
+
+      function smoothPath(points){
+        if(points.length < 2){ return ''; }
+        const d = [];
+        d.push(`M ${points[0].x} ${points[0].y}`);
+        for(let i=0;i<points.length-1;i++){
+          const p0 = points[i-1] || points[i];
+          const p1 = points[i];
+          const p2 = points[i+1];
+          const p3 = points[i+2] || p2;
+
+          const cp1x = p1.x + (p2.x - p0.x) / 6;
+          const cp1y = p1.y + (p2.y - p0.y) / 6;
+          const cp2x = p2.x - (p3.x - p1.x) / 6;
+          const cp2y = p2.y - (p3.y - p1.y) / 6;
+
+          d.push(`C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x} ${p2.y}`);
+        }
+        return d.join(' ');
+      }
+
+      const pts = data.map((v,i)=>({x:x(i), y:y(v)}));
+
+      const area = document.createElementNS('http://www.w3.org/2000/svg','path');
+      const areaPath = smoothPath(pts) + ` L ${x(data.length-1)} ${y(minY)} L ${x(0)} ${y(minY)} Z`;
+      area.setAttribute('d', areaPath);
+      area.setAttribute('fill','url(#gradLine)');
+      area.setAttribute('stroke','none');
+      svgEl.appendChild(area);
+
+      const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+      path.setAttribute('d', smoothPath(pts));
+      path.setAttribute('fill','none');
+      path.setAttribute('stroke','#3b82f6');
+      path.setAttribute('stroke-width','3');
+      path.setAttribute('stroke-linecap','round');
+      path.setAttribute('stroke-linejoin','round');
+      svgEl.appendChild(path);
+
+      pts.forEach((p,i)=>{
+        const dot = document.createElementNS('http://www.w3.org/2000/svg','circle');
+        dot.setAttribute('cx', p.x);
+        dot.setAttribute('cy', p.y);
+        dot.setAttribute('r', 3.5);
+        dot.setAttribute('fill','#3b82f6');
+        svgEl.appendChild(dot);
+
+        if(i === pts.length-1){
+          const label = document.createElementNS('http://www.w3.org/2000/svg','text');
+          label.setAttribute('x', p.x + 8);
+          label.setAttribute('y', p.y - 8);
+          label.setAttribute('fill','#111');
+          label.setAttribute('font-size','12');
+          label.setAttribute('font-weight','700');
+          label.textContent = isRate ? `${(data[i] ?? 0).toFixed?.(1)?.replace?.(/\.0$/,'') || data[i]}%`
+                                     : `${Number(data[i]||0).toLocaleString()} 人`;
+          svgEl.appendChild(label);
+        }
+      });
+    }
+
+    function bindToggles(){
+      const toggle = document.getElementById('chartTypeToggle');
+      toggle?.querySelectorAll('.opt').forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          toggle.querySelectorAll('.opt').forEach(b=>b.classList.remove('active'));
+          btn.classList.add('active');
+          renderChart(btn.dataset.type);
+        });
+      });
+    }
+
+    function downloadSvgAsPng(){
+      const serializer = new XMLSerializer();
+      const source = serializer.serializeToString(document.getElementById('lineChart'));
+      const svgBlob = new Blob([source], {type:'image/svg+xml;charset=utf-8'});
+      const url = URL.createObjectURL(svgBlob);
+      const img = new Image();
+      img.onload = function(){
+        const canvas = document.createElement('canvas');
+        canvas.width = 1200; canvas.height = 540;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0,0,canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        URL.revokeObjectURL(url);
+        const a = document.createElement('a');
+        a.download = 'chart.png';
+        a.href = canvas.toDataURL('image/png');
+        a.click();
+      };
+      img.src = url;
+    }
+
+   window.onload = async function () {
+  await fetchOverview();
+  await fetchWeekly();          // 會帶 weekOffset
+  renderChart('answerRate');
+  bindToggles();
+  bindWeekNav();                // ⬅ 新增
+  document.getElementById('downloadPngBtn')?.addEventListener('click', downloadSvgAsPng);
+};
+  </script>
+
+</body>
+</html>

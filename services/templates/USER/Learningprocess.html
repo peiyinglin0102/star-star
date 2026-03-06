@@ -1,0 +1,1433 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>學習歷程 - 星星的世界</title>
+  <link href="https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+  <style>
+    :root{
+      --bg:#ffffff;
+      --brand:#f6cdd8;
+      --brand-2:#fdeef2;
+      --text:#524036;
+      --card:#fff;
+      --shadow:0 8px 18px rgba(0,0,0,.06);
+      --radius:16px;
+      --line:#eee;
+      --pill:#fff4f6;
+      --pink:#f48aa1;
+      --pink-fill:rgba(244,138,161,.15);
+      --blue:#9ec7f7;
+      --blue-fill:rgba(158,199,247,.15);
+      --accent:#f3b340;         /* 專業感點綴色（與全站一致） */
+      --side-hover:#fff7dc;     /* 左欄滑過底色 */
+      --side-active:#ffe9b2;    /* 左欄高亮底色（柔） */
+      --side-border:#f0e2c4;    /* 左欄邊框色 */
+    }
+    *{box-sizing:border-box;}
+    html{ scroll-behavior:smooth; }
+    body{
+      margin:0;
+      font-family:'ZCOOL KuaiLe',"微軟正黑體",sans-serif;
+      color:var(--text);
+      background:var(--bg);
+      background-image:url('{{ url_for("static", filename="img/learn_bg.png") }}'), url('/USER/images/11.png');
+      background-size:cover; background-repeat:no-repeat; background-attachment:fixed;
+      overflow-x:hidden;
+    }
+
+    /* ===== 導覽列（與 User_Home 一致） ===== */
+    .navbar{
+      background: linear-gradient(to top, rgba(230,230,230,0), rgb(182,240,245));
+      padding: 30px 24px;
+      display:flex; justify-content:space-between; align-items:center;
+      position: sticky; top: 0; z-index: 1000;
+    }
+    .logo{
+      font-size:55px; font-weight:bold; color:#603d2b; cursor:pointer;
+      font-family:'ZCOOL KuaiLe',sans-serif;
+    }
+    .nav-links{ display:flex; align-items:center; gap:40px; }
+    .nav-links a{
+      text-decoration:none; font-size:24px; font-weight:bold; color:#603d2b;
+      transition: color .3s; font-family:'ZCOOL KuaiLe',sans-serif;
+    }
+    .nav-links a:hover{ color:#f3b340; }
+    .login-out{
+      background:#fff; border:2px solid #999; border-radius:30px;
+      padding:8px 20px; cursor:pointer; font-weight:bold; transition: background-color .3s;
+    }
+    .login-out:hover{ background:#f3b340; color:#fff; }
+
+    .container{ width:min(920px,92%); margin:16px auto 48px; }
+
+    /* ===== 左側導覽（全新樣式） ===== */
+    .side-nav{ display:none; } /* 手機預設不顯示 */
+    @media (min-width: 1024px){
+      .layout{
+        width:min(1200px, 92%);
+        margin: 0 auto;
+        display:grid; grid-template-columns: 240px 1fr; gap:22px;
+      }
+      .side-nav{
+        display:block;
+        position: sticky; top: 90px;
+        align-self: start;
+        background:#fffef8e6; backdrop-filter: blur(2px);
+        border:1px solid var(--side-border);
+        border-radius:14px;
+        box-shadow:var(--shadow);
+        padding:10px;
+        height:max-content;
+      }
+      .side-nav .side-title{
+        display:flex; align-items:center; gap:8px;
+        margin:6px 8px 10px;
+        font-size:14px; font-weight:900; color:#603d2b; letter-spacing:.5px;
+      }
+      .side-links{
+        display:flex; flex-direction:column; gap:8px; padding: 2px 6px 8px;
+      }
+      .side-link{
+        position:relative;
+        display:flex; align-items:center; gap:10px;
+        text-decoration:none;
+        padding:10px 12px 10px 14px;
+        border:1px solid var(--side-border);
+        border-radius:12px;
+        color:#603d2b;
+        font-weight:800; font-size:14px;
+        background:#ffffff;
+        transition: background .15s ease, border-color .15s ease, transform .05s ease;
+      }
+      .side-link:hover{ background:var(--side-hover); }
+      .side-link:active{ transform:scale(.99); }
+
+      /* 左側專業感高亮：左邊金色條＋底色高亮＋字色加深 */
+      .side-link.active{
+        background:var(--side-active);
+        border-color:#e9d39f;
+        color:#595959;
+      }
+      .side-link.active::before{
+        content:"";
+        position:absolute; left:-1px; top:8px; bottom:8px;
+        width:4px; border-radius:4px;
+        background: linear-gradient(180deg, #8ee1ff, var(--accent));
+        box-shadow: 0 0 0 1px rgba(243,179,64,.25) inset;
+      }
+
+      /* 主要內容外層 */
+      .main-col{ }
+    }
+
+    /* 讓錨點被捲到時，不會被導覽列遮住 */
+    .anchor-target{ scroll-margin-top: 90px; }
+
+    /* ===== KPI ===== */
+    .kpis{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    .kpi{
+      background:var(--card); border-radius:14px; box-shadow:var(--shadow);
+      display:flex; align-items:center; padding:12px 14px; gap:12px;
+    }
+    .kpi .icon{
+      width:48px; height:48px; border-radius:50%; background:var(--brand-2);
+      display:grid; place-items:center; font-size:22px;
+    }
+    .kpi .meta b{ display:block; font-size:14px; color:#888; }
+    .kpi .meta span{ font-size:22px; color:#e0647c; font-weight:800; }
+
+    /* ===== 標題 pill ===== */
+    .pill-title{
+      width:max-content; margin:14px auto 8px; padding:6px 14px;
+      background:#ffeef2; color:#e0647c; border-radius:999px; font-weight:700;
+      box-shadow:var(--shadow); font-size:15px;
+    }
+
+    /* ===== 卡片 ===== */
+    .card{
+      background:var(--card); border-radius:var(--radius); box-shadow:var(--shadow);
+      padding:14px; margin-top:6px;
+    }
+
+    /* ===== 雷達兩圖 ===== */
+    .twins{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    .mini-title{
+      margin:2px auto 8px; width:max-content; padding:6px 12px; background:var(--pill);
+      color:#dd6b83; border-radius:999px; font-size:14px; border:1px solid #ffd6df;
+    }
+    .chart-box{ height:210px; }
+    .chart-box canvas{ width:100%!important; height:100%!important; }
+
+    /* ===== 趨勢圖 ===== */
+    .trend-head{
+      display:flex; justify-content:center; align-items:center;
+      gap:12px; margin-bottom:6px; position:relative;
+      padding-left: 96px;
+    }
+    .range-btn{
+      border:none; width:28px; height:28px; border-radius:50%;
+      background:#f1f1f1; color:#777; font-weight:800; cursor:pointer;
+      display:grid; place-items:center;
+    }
+    .range-btn:disabled{ opacity:.35; cursor:not-allowed; }
+    .date{ color:#444; font-weight:800; font-size:16px; letter-spacing:1px; }
+    .seg{
+      position:absolute;
+      left:20px; right:auto;
+      transform:translateY(-2px);
+      display:flex; gap:8px; align-items:center;
+    }
+    .seg button{
+      border:none; background:#f6f6f6; padding:6px 10px; border-radius:999px;
+      cursor:pointer; font-weight:700; color:#666; font-size:13px;
+    }
+    .seg button.active{ background:#ffeef2; color:#e0647c; box-shadow:var(--shadow); }
+    .trend-box{ height:240px; }
+    .trend-box canvas{ width:100%!important; height:100%!important; }
+
+    /* ===== 表格 ===== */
+    .tabs{ display:flex; gap:14px; margin:6px 0 10px; }
+    .tab{
+      margin:0 auto; width:max-content; padding:6px 14px;
+      background:#ffeef2; color:#e0647c; border-radius:999px; font-weight:700;
+      box-shadow:var(--shadow); font-size:14px;
+    }
+    .table-wrap{ background:var(--card); border-radius:var(--radius); box-shadow:var(--shadow); padding:8px 10px; }
+    table{ width:100%; border-collapse:collapse; font-family:"微軟正黑體",sans-serif; }
+    thead th{
+      font-size:12px; color:#777; font-weight:700; border-bottom:1px solid var(--line);
+      padding:8px 6px; text-align:center;
+    }
+    tbody td{
+      padding:8px 6px; text-align:center; border-bottom:1px solid #f4f4f4; font-size:13px;
+    }
+    .pagination{ display:flex; justify-content:center; align-items:center; gap:8px; padding:6px 0 2px; }
+    .pagination button.chev{ border:none; background:#fff; padding:0 6px; cursor:pointer; color:#999; }
+    .pagination button.chev[disabled]{ opacity:.4; cursor:not-allowed; }
+    .pagination button.pnum{ border:1px solid #ccc; background:#fff; width:24px; height:24px; border-radius:50%; font-size:12px; }
+    .pagination button.pnum.active{ background:#111; color:#fff; border-color:#111; }
+
+    .dot{ width:6px; height:6px; border-radius:50%; background:#d0d0d0; }
+
+    .thumb-wrap{ position:relative; width:100px; height:64px; border:1px solid #eee; border-radius:8px; overflow:hidden; display:grid; place-items:center; background:#fafafa }
+    .thumb-media{ width:100%; height:100%; object-fit:cover; display:block; }
+    .thumb-badge{ position:absolute; top:6px; right:6px; font-size:10px; background:rgba(0,0,0,.55); color:#fff; padding:2px 4px; border-radius:6px }
+    .thumb-play{ position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:0;height:0;border-left:14px solid #fff;border-top:9px solid transparent;border-bottom:9px solid transparent; opacity:.9 }
+
+    /* 打開彈窗時，禁止背景滾動 */
+    body.no-scroll{ overflow: hidden; }
+
+    /* 導覽列設定按鈕（保留原有設計） */
+    .nav-settings{
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 44px; height: 44px; border-radius: 12px; border: 2px solid #c9b9a8;
+      background: #fff9e8; cursor: pointer; transition: all .2s ease;
+      box-shadow: 0 6px 12px rgba(0,0,0,.06);
+    }
+    .nav-settings:hover{ background:#fbe1a8; transform: translateY(-1px); }
+
+    /* 設定 Modal（保留原有設計） */
+    .sysset-modal{
+      position: fixed; inset: 0; background: rgba(0,0,0,.35);
+      display: none; align-items: center; justify-content: center;
+      z-index: 2000; padding: 18px;
+    }
+    .sysset-modal[aria-hidden="false"]{ display: flex; }
+    .sysset-dialog{
+      width: min(720px, 92vw);
+      background: #fffef8; border: 2px solid #f3deb7; border-radius: 18px;
+      box-shadow: 0 24px 60px rgba(0,0,0,.22);
+      overflow: hidden; animation: sysset-pop .12s ease-out;
+    }
+    @keyframes sysset-pop{ from{ transform: scale(.98); opacity:.5 } to{ transform: scale(1); opacity:1 } }
+    .sysset-header{
+      display:flex; align-items:center; justify-content:space-between;
+      padding: 14px 16px; background: linear-gradient(180deg,#fff7dc,#fffef6);
+      border-bottom: 1px solid #f0e2c4;
+    }
+    .sysset-header h3{ margin:0; color:#603d2b; font-size:20px; letter-spacing:.5px; }
+    .sysset-close{
+      border:none; background:transparent; cursor:pointer; font-size:20px;
+      padding:6px 10px; border-radius:10px; color:#603d2b;
+    }
+    .sysset-close:hover{ background:#fff0cc; }
+    .sysset-body{ padding: 16px; display:grid; gap:16px; }
+    .sysset-card{
+      background:#ffffff; border: 1px solid #f0e2c4; border-radius:14px;
+      padding:14px; box-shadow: 0 10px 24px rgba(0,0,0,.05);
+    }
+    .sysset-card h4{ margin: 0 0 6px; color:#603d2b; }
+    .sysset-hint{ color:#8b6b55; margin:.25rem 0 .75rem; }
+    .sysset-grid{ display:grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .sysset-grid label{ display:grid; gap:6px; font-size:14px; color:#6b4b35; }
+    .sysset-grid input{
+      padding:10px 12px; border:1px solid #e8d9b8; border-radius:12px; font-size:16px;
+      background:#fffef8;
+    }
+    .sysset-actions{ display:flex; gap:10px; margin-top:8px; }
+    .sysset-primary{
+      background:#f3b340; color:#fff; border:none; border-radius:12px; padding:10px 14px; cursor:pointer;
+      box-shadow: 0 6px 14px rgba(243,179,64,.35);
+    }
+    .sysset-primary:hover{ filter: brightness(1.05); }
+    .sysset-ghost{
+      background:#fff8e6; color:#8b6b35; border:1px solid #f0e2c4; border-radius:12px; padding:10px 14px; cursor:pointer;
+    }
+    .sysset-ghost:hover{ background:#ffefc8; }
+    .sysset-status{ margin-top:8px; font-weight:700; color:#603d2b; }
+    .sysset-slider-row{ display:flex; align-items:center; gap:12px; }
+    .sysset-slider-row input[type="range"]{ width:100%; accent-color:#f3b340; }
+    .sysset-row{ display:flex; align-items:center; gap:12px; margin-top:8px; color:#603d2b; }
+
+    .sysset-toast{
+      position: fixed; left: 50%; bottom: 100px; transform: translateX(-50%);
+      background:#111827; color:#fff; padding: 10px 14px; border-radius: 10px;
+      box-shadow: 0 10px 24px rgba(0,0,0,.25); z-index: 2001;
+    }
+
+    /* === 手機版（<=768px）=== */
+    .hamburger{ display:none; }
+    .mobile-menu, .mobile-menu-backdrop{ display:none; }
+    .mobile-menu.active{ display:block; }
+    .mobile-menu-backdrop.active{ display:block; }
+
+    @media (max-width: 768px){
+      body{
+        background-size: cover !important;
+        background-position: center bottom !important;
+        background-repeat: no-repeat !important;
+        background-attachment: scroll !important;
+        overflow-x: hidden !important;
+      }
+
+      .mobile-menu-title{
+        position: sticky; top: 0;
+        background: #fffdf6;
+        color:#603d2b;
+        font-weight: 900;
+        font-size: 18px;
+        letter-spacing: .5px;
+        text-align: center;
+        padding: 12px 12px 12px;
+        margin: -8px -8px 19px;
+        border-top-left-radius: 16px;
+        border-top-right-radius: 16px;
+        box-shadow: inset 0 -1px 0 #f0e2c4;
+        z-index: 1;
+      }
+      .mobile-menu a,
+      .mobile-menu button{
+        justify-content: center;
+        text-align: center;
+        gap: 8px;
+      }
+      .mobile-menu .logout{
+        background: #f3b340 !important;
+        color: #ffffff !important;
+        border: 1px solid #f3b340 !important;
+        box-shadow: 0 6px 14px rgba(243,179,64,.25);
+      }
+      .mobile-menu .logout:hover{ filter: brightness(1.05); }
+      .mobile-menu .logout:active{ transform: scale(.99); }
+
+      .navbar{
+        position: fixed !important; top: 0; left: 0; right: 0;
+        padding: 12px 16px !important;
+        background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,255,255,0)) !important;
+        backdrop-filter: blur(2px); z-index: 1200;
+      }
+      .logo{ font-size: 28px !important; }
+      .nav-links{ display: none !important; }
+      .hamburger{
+        display: inline-flex; align-items:center; justify-content:center;
+        width: 44px; height: 44px; border-radius: 12px; border: 2px solid #c9b9a8;
+        background: #fff9e8; cursor: pointer; transition: all .2s ease;
+        box-shadow: 0 6px 12px rgba(0,0,0,.06); z-index: 1400;
+      }
+      .hamburger:hover{ background:#fbe1a8; transform: translateY(-1px); }
+
+      .mobile-menu{
+        position: fixed; top: 64px; right: 12px;
+        width: min(380px, calc(100dvw - 24px));
+        max-height: calc(100dvh - 88px);
+        overflow-y: auto; overflow-x: hidden;
+        box-sizing: border-box;
+        background: #ffffffee;
+        border: 1px solid #f0e2c4;
+        border-radius: 16px;
+        box-shadow: 0 16px 36px rgba(0,0,0,.18);
+        padding: 8px;
+        z-index: 1300;
+        backdrop-filter: blur(4px);
+        display: none;
+      }
+      .mobile-menu a, .mobile-menu button{
+        display: flex; align-items: center; gap: 10px;
+        width: 100%; box-sizing: border-box;
+        text-align: left;
+        padding: 12px 14px;
+        font-size: 16px; font-weight: 700;
+        color: #603d2b; background: #fff; border: 1px solid #f0e2c4;
+        border-radius: 12px; margin: 6px 0; text-decoration: none;
+        box-shadow: 0 6px 14px rgba(0,0,0,.05);
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      }
+      .mobile-menu a:active, .mobile-menu button:active{ transform: scale(.99); }
+
+      .mobile-menu-backdrop{
+        position: fixed; inset: 0;
+        background: rgba(0,0,0,.25);
+        z-index: 1250;
+        display: none;
+      }
+
+      /* 內容推開避免被固定導覽列蓋到 */
+      .container, main.container{
+        width: min(920px, 92%) !important;
+        margin: calc(104px + env(safe-area-inset-top)) auto 56px !important;
+      }
+
+      .chart-box{ height: 240px !important; }
+      .trend-box{ height: 280px !important; }
+
+      .kpis{ grid-template-columns: 1fr !important; gap: 12px !important; }
+      .twins{ grid-template-columns: 1fr !important; gap: 12px !important; }
+    }
+
+    /* 手機：避免週/年切換擋到「上一週」按鈕 */
+    @media (max-width: 768px){
+      .trend-head{ padding-left: 110px; }
+    }
+ /* === 左側快速導覽：與內容卡片同風格 + 上方多留空 === */
+@media (min-width: 1024px){
+  /* 版面上緣再空一點（含右側內容一起往下，視覺更平衡） */
+  .layout{
+    margin-top: 12px; /* 可調 12~20 之間 */
+  }
+
+  /* 快速導覽容器：用與內容相同的卡片感 */
+  .side-nav{
+    background: var(--card) !important;        /* 和 .card 一樣的白底 */
+    border: 1px solid var(--line) !important;  /* 和表格/卡片一致的線色 */
+    box-shadow: var(--shadow) !important;      /* 同 site 陰影 */
+    border-radius: var(--radius) !important;   /* 同全站圓角 */
+    padding: 12px !important;
+    /* 再往下空一點，避免緊貼導覽列 */
+    margin-top: 30px !important;
+    /* sticky 的參考高度再高一點，避免被 navbar 覆蓋感 */
+    top: 110px !important;  /* 原 90px → 110px */
+  }
+
+  .side-nav .side-title{
+    color: var(--text) !important;
+    font-weight: 900;
+    letter-spacing: .5px;
+    margin: 6px 8px 12px !important;
+  }
+
+  .side-links{ gap: 10px !important; }
+
+  /* 每個連結：跟內容卡片一樣的白卡底、淡邊、柔陰影 */
+  .side-link{
+    background: #fff !important;
+    color: var(--text) !important;
+    border: 1px solid var(--line) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 8px 18px rgba(0,0,0,.06) !important; /* 和 --shadow 同級感 */
+    padding: 10px 14px !important;
+    transition: background .15s ease, border-color .15s ease, transform .05s ease;
+  }
+  .side-link:hover{
+    background: var(--pill) !important;          /* 用 pill 的柔色 */
+    border-color: #ffd6df !important;            /* 和 .mini-title 邊色對上 */
+  }
+
+  /* active 狀態：沿用內容的點綴金色 + 柔和底色 */
+  .side-link.active{
+    background: var(--side-active) !important;   /* #ffe9b2（已在 :root） */
+    border-color: #e9d39f !important;
+    color: #4a311e !important;                   /* 深一點的文字色 */
+  }
+  .side-link.active::before{
+    content: "";
+    position: absolute; left: -1px; top: 8px; bottom: 8px; width: 4px; border-radius: 4px;
+    background: linear-gradient(180deg, #ffd56b, var(--accent)); /* 和內容點綴同色系 */
+    box-shadow: 0 0 0 1px rgba(243,179,64,.25) inset;
+  }
+}
+
+/* 只影響桌機版左側欄的「目前位置」高亮：改成情境藍 */
+@media (min-width: 1024px){
+  .layout .side-nav .side-links .side-link.active{
+    background: var(--blue-fill) !important;            /* 淡藍底 */
+    border-color: rgba(158,199,247,.55) !important;     /* 藍邊 */
+    color: #2a4d7a !important;                          /* 深藍字 */
+    box-shadow: 0 8px 18px rgba(158,199,247,.25) !important;
+  }
+  .layout .side-nav .side-links .side-link.active::before{
+    background: var(--blue) !important;                 /* 左側色條改藍 */
+    box-shadow:
+      0 0 0 1px rgba(158,199,247,.35) inset,
+      0 0 8px rgba(158,199,247,.25) !important;
+  }
+}
+
+  </style>
+</head>
+<body data-logout-url="{{ url_for('auth.logout') }}">
+  <script src="{{ url_for('static', filename='js/parent_timer.js') }}?v=20251025-6"></script>
+
+  <!-- 導覽列 -->
+  <header class="navbar">
+    <div class="logo" onclick="location.href='{{ url_for('auth.home') }}'">星星的世界</div>
+    <nav class="nav-links">
+      <a href="{{ url_for('teach.page') }}">星星小教室</a>
+      <a href="{{ url_for('auth.profile_page') }}">星星資料</a>
+      <a href="{{ url_for('learn.learning_process') }}">星星旅程</a>
+      <button id="openSettings" class="nav-settings" title="系統設定" aria-label="系統設定">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" stroke="#603d2b" stroke-width="1.8"/>
+          <path d="M19 12a7 7 0 0 0-.07-.98l1.74-1.35-1.8-3.12-2.08.66a7 7 0 0 0-1.7-.98l-.3-2.17h-3.5l-.3 2.17a7 7 0 0 0-1.7.98l-2.08-.66-1.8 3.12L5.07 11A7 7 0 0 0 5 12c0 .33.02.65.07.98l-1.74 1.35 1.8 3.12 2.08-.66c.53.41 1.1.74 1.7.98l.3 2.17h3.5l.3-2.17c.6-.24 1.17-.57 1.7-.98l2.08.66 1.8-3.12L18.93 13c.05-.33.07-.65.07-.98Z" stroke="#603d2b" stroke-width="1.8"/>
+        </svg>
+      </button>
+      <button class="login-out" onclick="location.href='{{ url_for('auth.logout') }}'">登出</button>
+    </nav>
+
+    <!-- 手機漢堡 -->
+    <button class="hamburger" id="mobileMenuBtn" aria-label="開啟選單" aria-expanded="false" aria-controls="mobileMenu">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M4 7h16M4 12h16M4 17h16" stroke="#603d2b" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    </button>
+  </header>
+
+  <!-- 手機選單 -->
+  <div class="mobile-menu-backdrop" id="mobileMenuBackdrop"></div>
+  <div class="mobile-menu" id="mobileMenu" role="menu" aria-hidden="true">
+    <div class="mobile-menu-title" role="heading" aria-level="1">功能選單</div>
+    <a href="{{ url_for('teach.page') }}" role="menuitem">🌟 星星小教室</a>
+    <a href="{{ url_for('auth.profile_page') }}" role="menuitem">🧒 星星資料</a>
+    <a href="{{ url_for('learn.learning_process') }}" role="menuitem">🗺️ 星星旅程</a>
+    <button type="button" id="mobileOpenSettings" role="menuitem" aria-label="系統設定">⚙️ 系統設定</button>
+    <button type="button" class="logout" id="mobileLogout" role="menuitem">登出</button>
+  </div>
+
+  <!-- 兩欄版面 -->
+  <div class="layout">
+    <!-- 左側快速導覽（新樣式 + 自動高亮） -->
+    <aside class="side-nav" aria-label="頁內導覽">
+      <div class="side-title">快速導覽</div>
+      <nav class="side-links" id="sideLinks">
+        <a class="side-link" href="#kpi-overview" data-target="kpi-overview">學習成效總覽</a>
+        <a class="side-link" href="#radars"        data-target="radars">各項學習成效</a>
+        <a class="side-link" href="#trend"         data-target="trend">整體答對趨勢</a>
+        <a class="side-link" href="#rounds"        data-target="rounds">系統答題情況</a>
+        <a class="side-link" href="#custom"        data-target="custom">自訂答題情況</a>
+      </nav>
+    </aside>
+
+    <!-- 右側主要內容 -->
+    <main class="container main-col">
+      <div id="kpi-overview" class="pill-title anchor-target">學習成效總覽</div>
+
+      <!-- KPI -->
+      <section class="kpis">
+        <div class="kpi">
+          <div class="icon">🧩</div>
+          <div class="meta">
+            <b>總答題數</b>
+            <span id="kpi-total-answered">0</span>
+          </div>
+        </div>
+        <div class="kpi">
+          <div class="icon">🚀</div>
+          <div class="meta">
+            <b>總答對率</b>
+            <span id="kpi-acc">100%</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 各項學習成效 -->
+      <div id="radars" class="pill-title anchor-target">各項學習成效</div>
+      <section class="card twins">
+        <div>
+          <div class="mini-title">情緒</div>
+          <div class="chart-box"><canvas id="radarEmotion"></canvas></div>
+        </div>
+        <div>
+          <div class="mini-title">情境</div>
+          <div class="chart-box"><canvas id="radarScenario"></canvas></div>
+        </div>
+      </section>
+
+      <!-- 整體答對趨勢 -->
+      <div id="trend" class="pill-title anchor-target">整體答對趨勢</div>
+      <section class="card">
+        <div class="trend-head">
+          <button id="btnPrevWeek" class="range-btn" title="上一週">◀</button>
+          <div class="date" id="rangeLabel">10/13–10/19</div>
+          <button id="btnNextWeek" class="range-btn" title="下一週">▶</button>
+
+          <div class="seg">
+            <button id="btnWeek" class="active">週</button>
+            <button id="btnYear">年</button>
+          </div>
+        </div>
+        <div class="trend-box"><canvas id="trendLine"></canvas></div>
+      </section>
+
+      <!-- 系統答題情況 -->
+      <div id="rounds" class="pill-title anchor-target">系統答題情況</div>
+      <section class="table-wrap">
+        <table id="roundTable">
+          <thead>
+            <tr>
+              <th>回合</th><th>答對題數</th><th>答對率</th><th>作答日期</th><th>操作</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <div class="pagination" id="pager"></div>
+      </section>
+
+      <!-- 單回合詳情 Modal -->
+      <div id="itemModal" style="position:fixed;inset:0;display:none;background:rgba(0,0,0,.35);z-index:2000;">
+        <div style="max-width:920px;margin:40px auto;background:#fff;border-radius:14px;box-shadow:var(--shadow);padding:14px;max-height:80vh;overflow:auto;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <h3 style="margin:0;font-size:18px;">回合單題明細</h3>
+            <button onclick="closeModal()" style="border:none;background:#f3f3f3;border-radius:8px;padding:6px 10px;cursor:pointer;">關閉</button>
+          </div>
+          <div id="modalBody" style="margin-top:8px;"></div>
+        </div>
+      </div>
+
+      <!-- 自訂答題情況 -->
+      <div id="custom" class="pill-title anchor-target">自訂答題情況</div>
+      <section class="table-wrap">
+        <table id="customTable">
+          <thead>
+            <tr>
+              <th>題組名字</th>
+              <th>答對率</th>
+              <th>最後作答日期</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <div class="pagination" id="customPager"></div>
+      </section>
+
+      <!-- 自訂題－查看詳情 Modal -->
+      <div id="customModal" style="position:fixed;inset:0;display:none;background:rgba(0,0,0,.35);z-index:2000;">
+        <div style="max-width:920px;margin:40px auto;background:#fff;border-radius:14px;box-shadow:var(--shadow);padding:14px;max-height:80vh;overflow:auto;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <h3 id="customModalTitle" style="margin:0;font-size:18px;">題組詳情</h3>
+            <button onclick="closeCustomModal()" style="border:none;background:#f3f3f3;border-radius:8px;padding:6px 10px;cursor:pointer;">關閉</button>
+          </div>
+
+          <!-- 最近一次回合 KPI -->
+          <div id="customModalKpi" style="display:flex;gap:10px;margin:10px 0 12px;"></div>
+
+          <!-- 長期：跨所有回合的每題答對率 -->
+          <div class="table-wrap" style="margin-top:12px;">
+            <div class="mini-title">長期題目表現（跨所有回合）</div>
+            <table id="customLongTermTable" style="width:100%;border-collapse:collapse;">
+              <thead>
+                <tr>
+                  <th style="width:56px;">題號</th>
+                  <th style="width:120px;">縮圖</th>
+                  <th style="text-align:left;">題目</th>
+                  <th>正解</th>
+                  <th>作答次數</th>
+                  <th>答對數</th>
+                  <th style="width:90px;">答對率</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- 系統設定 Modal -->
+  <div id="sysSettingsModal" class="sysset-modal" aria-hidden="true">
+    <div class="sysset-dialog" role="dialog" aria-modal="true" aria-labelledby="sysset-title">
+      <div class="sysset-header">
+        <h3 id="sysset-title">系統設定</h3>
+        <button id="sysSettingsClose" class="sysset-close" aria-label="關閉">✕</button>
+      </div>
+
+      <div class="sysset-body">
+        <section class="sysset-card">
+          <h4>⏱ 使用時間控管</h4>
+          <p class="sysset-hint">家長可設定時長；倒數前 1 分鐘有語音提醒，時間到會自動登出。</p>
+
+          <div class="sysset-grid">
+            <label>
+              小時
+              <input id="timeHours" type="number" min="0" max="12" step="1" value="0">
+            </label>
+            <label>
+              分鐘
+              <input id="timeMinutes" type="number" min="0" max="720" step="1" value="30">
+            </label>
+          </div>
+
+          <div class="sysset-actions">
+            <button id="timerStart" class="sysset-primary" type="button" onclick="__uiStartTimer()">開始計時</button>
+            <button id="timerStop"  class="sysset-ghost"  type="button" onclick="__uiStopTimer()" disabled>停止計時</button>
+          </div>
+
+          <div class="sysset-status">剩餘時間：<span id="timeRemain">未開始</span></div>
+        </section>
+
+        <section class="sysset-card">
+          <h4>🗣️ 題庫語音播放速度</h4>
+          <p class="sysset-hint">調整全站語音朗讀速度（烏龜 ←→ 兔子）。</p>
+
+          <div class="sysset-slider-row">
+            <div class="sysset-row">
+              <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                <input id="ttsEnabled" type="checkbox">
+                啟用題庫語音
+              </label>
+            </div>
+            <span aria-hidden="true">🐢</span>
+            <input id="ttsRate" type="range" min="0.50" max="2.00" step="0.01" inputmode="decimal">
+            <span aria-hidden="true">🐇</span>
+          </div>
+          <div class="sysset-row">
+            目前倍率：<span id="ttsRateLabel">1.0×</span>
+            <button id="ttsTest" class="sysset-ghost">試聽一句</button>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <div id="sysWarnToast" class="sysset-toast" hidden></div>
+
+  <!-- 手機：漢堡選單控制 -->
+  <script>
+    (function(){
+      const btn = document.getElementById('mobileMenuBtn');
+      const menu = document.getElementById('mobileMenu');
+      const backdrop = document.getElementById('mobileMenuBackdrop');
+      const logoutUrl = document.body.getAttribute('data-logout-url') || '/logout';
+      const openSettingsBtn = document.getElementById('openSettings');
+      const mobileOpenSettings = document.getElementById('mobileOpenSettings');
+      const mobileLogout = document.getElementById('mobileLogout');
+
+      const mq = window.matchMedia('(max-width: 768px)');
+      function syncBurger(){
+        const show = mq.matches;
+        btn.style.display = show ? 'inline-flex' : 'none';
+        if(!show){
+          menu.classList.remove('active');
+          backdrop.classList.remove('active');
+          btn.setAttribute('aria-expanded','false');
+          menu.setAttribute('aria-hidden','true');
+        }
+      }
+      syncBurger();
+      mq.addEventListener('change', syncBurger);
+
+      function toggleMenu(force){
+        const willOpen = (force === true) || (force !== false && !menu.classList.contains('active'));
+        menu.classList.toggle('active,', false);
+        menu.classList.toggle('active', willOpen);
+        backdrop.classList.toggle('active', willOpen);
+        btn.setAttribute('aria-expanded', String(willOpen));
+        menu.setAttribute('aria-hidden', String(!willOpen));
+      }
+      btn.addEventListener('click', ()=>toggleMenu());
+      backdrop.addEventListener('click', ()=>toggleMenu(false));
+
+      mobileOpenSettings.addEventListener('click', ()=>{
+        toggleMenu(false);
+        openSettingsBtn?.click();
+      });
+
+      mobileLogout.addEventListener('click', ()=>{
+        toggleMenu(false);
+        location.href = logoutUrl;
+      });
+
+      document.addEventListener('keydown', (e)=>{
+        if(e.key === 'Escape' && menu.classList.contains('active')) toggleMenu(false);
+      });
+    })();
+  </script>
+
+  <!-- Chart 初始化與資料載入（原樣） -->
+  <script>
+    Chart.register(ChartDataLabels);
+    Chart.defaults.font.family = '"微軟正黑體","ZCOOL KuaiLe",sans-serif';
+    Chart.defaults.color = '#524036';
+    const cssVar = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+    const radarEmotion = new Chart(document.getElementById('radarEmotion'),{
+      type:'radar',
+      data:{ labels:[], datasets:[{
+        label:'情緒', data:[], fill:true,
+        backgroundColor: cssVar('--pink-fill'),
+        borderColor: cssVar('--pink'),
+        pointBackgroundColor: cssVar('--pink'),
+        borderWidth:1.6, pointRadius:2.6
+      }]},
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{display:false},
+          datalabels:{ color:'#6b6b6b', font:{size:11,weight:'700'}, formatter:v=>v, align:'end', offset:4, clip:true }
+        },
+        scales:{ r:{ angleLines:{ color:'#f0f0f0' }, grid:{ color:'#f0f0f0' }, min:0, max:100, grace:'5%', ticks:{ display:false },
+          pointLabels:{ padding:24, font:{ size:13, weight:'700' }, color:'#524036' } } }
+      }
+    });
+
+    const radarScenario = new Chart(document.getElementById('radarScenario'),{
+      type:'radar',
+      data:{ labels:[], datasets:[{
+        label:'情境', data:[], fill:true,
+        backgroundColor: cssVar('--blue-fill'),
+        borderColor: cssVar('--blue'),
+        pointBackgroundColor: cssVar('--blue'),
+        borderWidth:1.6, pointRadius:2.6
+      }]},
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{display:false},
+          datalabels:{ color:'#6b6b6b', font:{size:11,weight:'700'}, formatter:v=>v, align:'end', offset:4, clip:true }
+        },
+        scales:{ r:{ angleLines:{ color:'#f0f0f0' }, grid:{ color:'#f0f0f0' }, min:0, max:100, grace:'5%', ticks:{ display:false },
+          pointLabels:{ padding:24, font:{ size:13, weight:'700' }, color:'#524036' } } }
+      }
+    });
+
+    async function loadRadars(){
+      const [re, rs] = await Promise.all([
+        fetch('{{ url_for("learn.api_radar_emotion") }}').then(r=>r.json()),
+        fetch('{{ url_for("learn.api_radar_situation") }}').then(r=>r.json())
+      ]);
+      radarEmotion.data.labels = re.labels || [];
+      radarEmotion.data.datasets[0].data = (re.values || []).map(x=>Math.round(x));
+      radarEmotion.update();
+
+      radarScenario.data.labels = rs.labels || [];
+      radarScenario.data.datasets[0].data = (rs.values || []).map(x=>Math.round(x));
+      radarScenario.update();
+    }
+
+    const trendCtx = document.getElementById('trendLine');
+    const trend = new Chart(trendCtx,{
+      type:'line',
+      data:{ labels: [], datasets:[
+        { label:'答對率', data: [], borderWidth:1.8, tension:.35, pointRadius:3,
+          borderColor:cssVar('--pink'), backgroundColor:cssVar('--pink-fill'), fill:true,
+          datalabels:{ align:'top', offset:4, color:'#666', backgroundColor:'rgba(255,255,255,.85)',
+            borderColor:'#ddd', borderWidth:1, borderRadius:4, padding:{top:2,bottom:2,left:4,right:4},
+            font:{size:11, weight:'700'}, formatter:(v)=>v.toFixed(0) }
+        },
+        { label:'目標線(80%)', data: [], borderDash:[6,6], borderColor:cssVar('--blue'), pointRadius:0,
+          datalabels:{ display:false }, hidden:true }
+      ]},
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false}},
+        scales:{ y:{ suggestedMin:0, suggestedMax:100, grid:{color:'#f2f2f2'}}, x:{ grid:{display:false}} }
+      }
+    });
+
+    const btnWeek = document.getElementById('btnWeek');
+    const btnYear = document.getElementById('btnYear');
+    const rangeLabel = document.getElementById('rangeLabel');
+    const btnPrevWeek = document.getElementById('btnPrevWeek');
+    const btnNextWeek = document.getElementById('btnNextWeek');
+
+    let weekOffset = 0;
+    function setActive(btn){ [btnWeek,btnYear].forEach(b=>b.classList.remove('active')); btn.classList.add('active'); }
+
+    async function loadWeekly(off = weekOffset){
+      const r = await fetch(`{{ url_for("learn.api_trend_weekly") }}?offset=${off}`);
+      const j = await r.json();
+
+      trend.data.labels = j.labels || [];
+      trend.data.datasets[0].data = j.values || [];
+      trend.data.datasets[1].data = (j.labels || []).map(()=>80);
+      trend.update();
+
+      rangeLabel.textContent = j.range || '';
+      weekOffset = j.offset ?? 0;
+
+      btnPrevWeek.disabled = false;
+      btnNextWeek.disabled = !!j.is_latest;
+
+      btnPrevWeek.style.visibility = 'visible';
+      btnNextWeek.style.visibility = 'visible';
+    }
+
+    async function loadYearly(){
+      const r = await fetch('{{ url_for("learn.api_trend_yearly") }}');
+      const j = await r.json();
+      trend.data.labels = j.labels;
+      trend.data.datasets[0].data = j.values;
+      trend.data.datasets[1].data = j.labels.map(()=>80);
+      trend.update();
+      rangeLabel.textContent = '今年度';
+      btnPrevWeek.style.visibility = 'hidden';
+      btnNextWeek.style.visibility = 'hidden';
+    }
+
+    btnWeek.onclick = ()=>{ setActive(btnWeek); loadWeekly(0); };
+    btnYear.onclick = ()=>{ setActive(btnYear); loadYearly(); };
+
+    btnPrevWeek.onclick = ()=>{ 
+      if (btnWeek.classList.contains('active')) {
+        loadWeekly(weekOffset - 1);
+      }
+    };
+    btnNextWeek.onclick = ()=>{ 
+      if (btnWeek.classList.contains('active') && weekOffset < 0) {
+        loadWeekly(weekOffset + 1);
+      }
+    };
+
+    const tbody = document.querySelector('#roundTable tbody');
+    let paging = { limit: 5, offset: 0, total: 0, page: 1 };
+
+    const pagerEl = () => document.getElementById('pager');
+    const totalPages = () => Math.max(1, Math.ceil((paging.total || 0) / paging.limit));
+
+    function goPage(p){
+      const tp = totalPages();
+      const safe = Math.min(Math.max(1, p), tp);
+      paging.page   = safe;
+      paging.offset = (safe - 1) * paging.limit;
+      loadSessions();
+    }
+
+    function renderPager(){
+      const tp = totalPages();
+      const p  = paging.page;
+      const makePnum = (n, active=false) =>
+        `<button class="pnum${active ? ' active':''}" data-page="${n}">${n}</button>`;
+      const parts = [];
+      parts.push(`<button class="chev" id="prevPage" ${p<=1?'disabled':''}>◀</button>`);
+      const win = 2;
+      const start = Math.max(1, p - win);
+      const end   = Math.min(tp, p + win);
+      if (start > 1){
+        parts.push(makePnum(1, p===1));
+        if (start > 2) parts.push('<span class="dot"></span>');
+      }
+      for (let i = start; i <= end; i++){ parts.push(makePnum(i, i===p)); }
+      if (end < tp){
+        if (end < tp - 1) parts.push('<span class="dot"></span>');
+        parts.push(makePnum(tp, p===tp));
+      }
+      parts.push(`<button class="chev" id="nextPage" ${p>=tp?'disabled':''}>▶</button>`);
+      const el = pagerEl();
+      el.innerHTML = parts.join('');
+      el.querySelectorAll('.pnum').forEach(btn=>{
+        btn.addEventListener('click', () => goPage(parseInt(btn.dataset.page)));
+      });
+      const prev = document.getElementById('prevPage');
+      const next = document.getElementById('nextPage');
+      if (prev) prev.onclick = () => goPage(p - 1);
+      if (next) next.onclick = () => goPage(p + 1);
+    }
+
+    async function loadSessions(){
+      const r = await fetch(`{{ url_for("learn.api_sessions") }}?limit=${paging.limit}&offset=${paging.offset}`);
+      const j = await r.json();
+      paging.total = j.total_rows || 0;
+
+      tbody.innerHTML = (j.rows || []).map(row => {
+        const dt = (row.start_time || '').replace(/-/g, '.');
+        return `
+          <tr>
+            <td>${row.round_no}</td>
+            <td>${row.correct_cnt}</td>
+            <td>${row.accuracy_pct}%</td>
+            <td>${dt}</td>
+            <td>
+              <button class="pnum" style="width:auto;padding:4px 10px"
+                      onclick="openModal(${row.ss_id})">查看詳情</button>
+            </td>
+          </tr>`;
+      }).join('');
+
+      renderPager();
+    }
+
+    function isVideo(url){
+      return /\.(mp4|webm|mov|m4v|avi)$/i.test((url||'').split('?')[0]);
+    }
+
+    async function openModal(ssid){
+      const r = await fetch(`{{ url_for("learn.api_session_items", ss_id=0) }}`.replace('/0/','/'+ssid+'/'));
+      const j = await r.json();
+      const items = j.items || [];
+      const sum = j.summary || { total: 0, correct: 0, acc_pct: 0 };
+
+      const rows = items.map((it, idx) => {
+        let thumbHTML = `<div class="thumb-wrap"><span style="color:#aaa;">無圖</span></div>`;
+        if (it.s_media_url) {
+          if (isVideo(it.s_media_url)) {
+            thumbHTML = `
+              <a class="thumb-wrap" href="${it.s_media_url}" target="_blank" title="開啟影片">
+                <video class="thumb-media" src="${it.s_media_url}#t=0.1" preload="metadata" muted playsinline></video>
+                <span class="thumb-badge">影片</span>
+                <i class="thumb-play"></i>
+              </a>`;
+          } else {
+            thumbHTML = `
+              <a class="thumb-wrap" href="${it.s_media_url}" target="_blank" title="開啟圖片">
+                <img class="thumb-media" src="${it.s_media_url}" alt="">
+              </a>`;
+          }
+        }
+        const ok = (it.user_answer && it.user_answer.trim() !== '' && it.user_answer.trim() !== '未作答')
+          ? (it.is_correct ? '<b style="color:#16a34a">✔ 正確</b>' : '<b style="color:#ef4444">✖ 錯誤</b>')
+          : '<span style="color:#888">未作答</span>';
+
+        return `
+          <tr>
+            <td>${idx + 1}</td>
+            <td>${thumbHTML}</td>
+            <td style="text-align:left;">${escapeHtml(it.s_text || '')}
+              ${it.category_name ? `<div style="font-size:12px;color:#888;margin-top:2px;">分類：${escapeHtml(it.category_name)}</div>` : ''}</td>
+            <td>${escapeHtml(it.user_answer ?? '')}</td>
+            <td>${escapeHtml(it.correct_answer ?? '')}</td>
+            <td style="font-weight:800;">${ok}</td>
+          </tr>`;
+      }).join('');
+
+      const html = `
+        <div style="display:flex;gap:10px;margin:6px 0 12px;">
+          <div class="kpi" style="flex:1;"><div class="icon">📚</div><div class="meta"><b>本回合題數</b><span>${sum.total}</span></div></div>
+          <div class="kpi" style="flex:1;"><div class="icon">✅</div><div class="meta"><b>答對數</b><span>${sum.correct}</span></div></div>
+          <div class="kpi" style="flex:1;"><div class="icon">🎯</div><div class="meta"><b>答對率</b><span>${sum.acc_pct}%</span></div></div>
+        </div>
+        <div class="table-wrap">
+          <table style="width:100%;border-collapse:collapse;">
+            <thead>
+              <tr>
+                <th style="width:56px;">題數</th>
+                <th style="width:120px;">縮圖</th>
+                <th style="text-align:left;">題目</th>
+                <th>你的答案</th>
+                <th>正解</th>
+                <th style="width:80px;">對錯</th>
+              </tr>
+            </thead>
+            <tbody>${rows || `<tr><td colspan="6" style="padding:10px;color:#666;">此回合沒有記錄</td></tr>`}</tbody>
+          </table>
+        </div>`;
+      document.getElementById('modalBody').innerHTML = html;
+      document.getElementById('itemModal').style.display = 'block';
+    }
+
+    function closeModal(){ document.getElementById('itemModal').style.display = 'none'; }
+    function escapeHtml(s){
+      return (s||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+    }
+    function escapeAttr(s){
+      return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    async function loadKpis(){
+      const r = await fetch('{{ url_for("learn.api_kpis") }}');
+      const j = await r.json();
+      document.getElementById('kpi-total-answered').textContent = j.total_answered ?? 0;
+      document.getElementById('kpi-acc').textContent = ((j.overall_accuracy_pct ?? 0).toFixed(1)) + '%';
+    }
+
+    const customTbody = document.querySelector('#customTable tbody');
+    let customPaging = { limit: 10, offset: 0, total: 0, page: 1 };
+    const customPagerEl = () => document.getElementById('customPager');
+    const customTotalPages = () => Math.max(1, Math.ceil((customPaging.total || 0) / customPaging.limit));
+
+    function goCustomPage(p){
+      const tp = customTotalPages();
+      const safe = Math.min(Math.max(1, p), tp);
+      customPaging.page   = safe;
+      customPaging.offset = (safe - 1) * customPaging.limit;
+      loadCustomSets();
+    }
+
+    function renderCustomPager(){
+      const tp = customTotalPages();
+      const p  = customPaging.page;
+      const makePnum = (n, active=false) =>
+        `<button class="pnum${active ? ' active':''}" data-page="${n}">${n}</button>`;
+      const parts = [];
+      parts.push(`<button class="chev" id="prevCustom" ${p<=1?'disabled':''}>◀</button>`);
+      const win = 2;
+      const start = Math.max(1, p - win);
+      const end   = Math.min(tp, p + win);
+      if (start > 1){
+        parts.push(makePnum(1, p===1));
+        if (start > 2) parts.push('<span class="dot"></span>');
+      }
+      for (let i = start; i <= end; i++){ parts.push(makePnum(i, i===p)); }
+      if (end < tp){
+        if (end < tp - 1) parts.push('<span class="dot"></span>');
+        parts.push(makePnum(tp, p===tp));
+      }
+      parts.push(`<button class="chev" id="nextCustom" ${p>=tp?'disabled':''}>▶</button>`);
+      const el = customPagerEl();
+      el.innerHTML = parts.join('');
+      el.querySelectorAll('.pnum').forEach(btn=>{
+        btn.addEventListener('click', () => goCustomPage(parseInt(btn.dataset.page)));
+      });
+      const prev = document.getElementById('prevCustom');
+      const next = document.getElementById('nextCustom');
+      if (prev) prev.onclick = () => goCustomPage(p - 1);
+      if (next) next.onclick = () => goCustomPage(p + 1);
+    }
+
+    async function loadCustomSets(){
+      const r = await fetch(`{{ url_for("learn.api_custom_sets") }}?limit=${customPaging.limit}&offset=${customPaging.offset}`);
+      const j = await r.json();
+      customPaging.total = j.total_rows || (j.rows ? j.rows.length : 0);
+
+      customTbody.innerHTML = (j.rows || []).map(row => {
+        const lastAt = row.last_answered_at ? row.last_answered_at.replace(/-/g,'.') : '—';
+        return `
+          <tr>
+            <td style="text-align:left;">${escapeHtml(row.set_name)}</td>
+            <td>${row.accuracy_pct}%</td>
+            <td>${lastAt}</td>
+            <td>
+              <button
+                class="pnum open-custom"
+                data-setid="${row.set_id}"
+                data-setname="${escapeAttr(row.set_name)}"
+                style="width:auto;padding:4px 10px">
+                查看詳情
+              </button>
+            </td>
+          </tr>`;
+      }).join('');
+
+      customTbody.querySelectorAll('.open-custom').forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          const id = parseInt(btn.dataset.setid, 10);
+          const name = btn.dataset.setname || '';
+          openCustomModal(id, name);
+        });
+      });
+
+      renderCustomPager();
+    }
+
+    async function openCustomModal(setId, setName){
+      const r1 = await fetch(`{{ url_for("learn.api_custom_set_summary", set_id=0) }}`.replace('/0','/'+setId));
+      const j1 = await r1.json();
+
+      const r2 = await fetch(`{{ url_for("learn.api_custom_set_longterm", set_id=0) }}`.replace('/0','/'+setId));
+      const j2 = await r2.json();
+
+      document.getElementById('customModalTitle').textContent = `題組：${setName}`;
+
+      const sum = j1.summary || { question_cnt:0, practice_cnt:0, latest_question_cnt:0, accuracy_pct:0 };
+      document.getElementById('customModalKpi').innerHTML = `
+        <div class="kpi" style="flex:1;">
+          <div class="icon">📚</div>
+          <div class="meta"><b>題組題數</b><span>${sum.question_cnt}</span></div>
+        </div>
+        <div class="kpi" style="flex:1;">
+          <div class="icon">🧮</div>
+          <div class="meta"><b>本回合題數（最近一次）</b><span>${sum.latest_question_cnt}</span></div>
+        </div>
+        <div class="kpi" style="flex:1;">
+          <div class="icon">🔁</div>
+          <div class="meta"><b>練習次數</b><span>${sum.practice_cnt}</span></div>
+        </div>
+      `;
+
+      const longTbody = document.querySelector('#customLongTermTable tbody');
+      const stats = j2.items || [];
+      longTbody.innerHTML = stats.length ? stats.map((it, idx) => `
+        <tr>
+          <td>${idx+1}</td>
+          <td>
+            <div style="width:100px;height:64px;border:1px solid #eee;border-radius:8px;overflow:hidden;display:grid;place-items:center;background:#fafafa">
+              ${it.c_media_url ? `<img src="${it.c_media_url}" alt="" style="max-width:100%;max-height:100%;">` : '<span style="color:#aaa;">無圖</span>'}
+            </div>
+          </td>
+          <td style="text-align:left;">${escapeHtml(it.c_text || '')}</td>
+          <td>${escapeHtml(it.correct_answer ?? '')}</td>
+          <td>${it.answered_cnt}</td>
+          <td>${it.correct_cnt}</td>
+          <td><b>${it.acc_pct}%</b></td>
+        </tr>
+      `).join('') : `<tr><td colspan="7" style="padding:10px;color:#666;">尚無作答統計</td></tr>`;
+
+      document.getElementById('customModal').style.display = 'block';
+    }
+
+    function closeCustomModal(){ document.getElementById('customModal').style.display = 'none'; }
+
+    (async ()=>{
+      await loadKpis();
+      await loadWeekly();
+      await loadSessions();
+      await loadRadars();
+      await loadCustomSets();
+    })();
+  </script>
+
+  <!-- 語音（原樣） -->
+  <script>
+    (() => {
+      function pickPreferredVoice() {
+        const voices = speechSynthesis.getVoices() || [];
+        const by = (fn) => voices.find(fn);
+        let v = by(v => /Google/i.test(v.name) && v.lang === 'zh-TW')
+              || by(v => /Google/i.test(v.name) && /^zh(-|_)/i.test(v.lang))
+              || by(v => v.lang === 'zh-TW')
+              || by(v => /^zh(-|_)/i.test(v.lang));
+        return v || voices[0] || null;
+      }
+
+      window.StarSpeech = {
+        rate: Number(localStorage.getItem('tts.rate') || 1.0),
+        enabled: (localStorage.getItem('tts.enabled') ?? '1') !== '0',
+        voice: null,
+        ensureVoiceReady(){
+          return new Promise(res=>{
+            const pick = () => { this.voice = pickPreferredVoice(); res(); };
+            if ((speechSynthesis.getVoices() || []).length) pick();
+            else {
+              const h = () => { pick(); speechSynthesis.removeEventListener('voiceschanged', h); };
+              speechSynthesis.addEventListener('voiceschanged', h);
+              speechSynthesis.getVoices();
+            }
+          });
+        },
+        async speak(text){
+          if (!this.enabled) return;
+          await this.ensureVoiceReady();
+          const u = new SpeechSynthesisUtterance(text);
+          if (this.voice) { u.voice = this.voice; if (this.voice.lang) u.lang = this.voice.lang; }
+          else { u.lang = 'zh-TW'; }
+          u.rate = Math.min(2, Math.max(0.5, this.rate));
+          u.pitch = 1.0;
+          try { speechSynthesis.cancel(); } catch(_){}
+          speechSynthesis.speak(u);
+        }
+      };
+    })();
+  </script>
+  <script>
+    if (window.StarSpeech && !window.StarSpeech.enqueue) {
+      window.StarSpeech.enqueue = function ({ text, delay = 0, onEnd } = {}) {
+        setTimeout(async () => {
+          try { await window.StarSpeech.speak(text); }
+          finally { if (typeof onEnd === 'function') onEnd(); }
+        }, delay);
+      };
+    }
+  </script>
+
+  <!-- 系統設定控制（原樣） -->
+  <script>
+    (() => {
+      const $ = s => document.querySelector(s);
+      const openBtn  = $('#openSettings');
+      const modal    = $('#sysSettingsModal');
+      const closeBtn = $('#sysSettingsClose');
+
+      const inputH   = $('#timeHours');
+      const inputM   = $('#timeMinutes');
+      const btnStart = $('#timerStart');
+      const btnStop  = $('#timerStop');
+      const remainEl = $('#timeRemain');
+
+      const rate     = $('#ttsRate');
+      const rateLbl  = $('#ttsRateLabel');
+      const btnTest  = $('#ttsTest');
+      const enabled  = $('#ttsEnabled');
+
+      const logoutUrl = document.body.getAttribute('data-logout-url') || '/logout';
+
+      const openModal  = () => modal.setAttribute('aria-hidden','false');
+      const closeModal = () => modal.setAttribute('aria-hidden','true');
+      openBtn.addEventListener('click', openModal);
+      closeBtn.addEventListener('click', closeModal);
+      modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
+
+      const initRate = () => {
+        let saved = parseFloat(localStorage.getItem('tts.rate'));
+        if (Number.isNaN(saved)) saved = 1.0;
+        saved = Math.min(2, Math.max(0.5, saved));
+        rate.value = saved.toFixed(2);
+        rateLbl.textContent = saved.toFixed(2) + '×';
+        window.StarSpeech && (window.StarSpeech.rate = saved);
+        localStorage.setItem('tts.rate', saved.toFixed(2));
+      };
+      const initEnabled = () => {
+        const on = (localStorage.getItem('tts.enabled') ?? '1') !== '0';
+        enabled.checked = on;
+        window.StarSpeech && (window.StarSpeech.enabled = on);
+        localStorage.setItem('tts.enabled', on ? '1' : '0');
+      };
+      rate.addEventListener('input', () => {
+        let v = parseFloat(rate.value);
+        if (Number.isNaN(v)) v = 1.0;
+        v = Math.min(2, Math.max(0.5, v));
+        rate.value = v.toFixed(2);
+        rateLbl.textContent = v.toFixed(2) + '×';
+        window.StarSpeech && (window.StarSpeech.rate = v);
+        localStorage.setItem('tts.rate', v.toFixed(2));
+      });
+      enabled.addEventListener('change', () => {
+        const on = !!enabled.checked;
+        window.StarSpeech && (window.StarSpeech.enabled = on);
+        localStorage.setItem('tts.enabled', on ? '1' : '0');
+      });
+      btnTest.addEventListener('click', () => {
+        window.StarSpeech?.speak('這是速度測試。現在的語速是 ' + window.StarSpeech.rate.toFixed(2) + ' 倍。');
+      });
+      initRate(); initEnabled();
+
+      const fmt = (ms) => {
+        if (ms <= 0) return '00:00';
+        const s = Math.floor(ms/1000), m = Math.floor(s/60);
+        return String(m).padStart(2,'0') + ':' + String(s%60).padStart(2,'0');
+      };
+      const refreshRemain = () => {
+        const { active, left } = window.ParentTimer?.status() || {active:false,left:0};
+        remainEl.textContent = active ? fmt(left) : '未開始';
+        btnStart.disabled = active;
+        btnStop.disabled  = !active;
+        if (active && left <= 0) window.location.href = logoutUrl;
+      };
+      btnStart.addEventListener('click', () => {
+        const h = Math.max(0, parseInt(inputH.value || '0', 10));
+        const m = Math.max(0, parseInt(inputM.value || '0', 10));
+        const ms = (h*60 + m) * 60 * 1000;
+        if (ms > 0) ParentTimer.start(ms);
+      });
+      btnStop.addEventListener('click', () => ParentTimer.stop());
+      setInterval(refreshRemain, 500);
+      window.addEventListener('storage', (e) => {
+        if (e.key === 'timer.active' || e.key === 'timer.endAt') refreshRemain();
+      });
+      document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshRemain(); });
+      refreshRemain();
+    })();
+  </script>
+
+  <script>
+    function __uiStartTimer(){
+      var h = parseInt(document.getElementById('timeHours')?.value || '0', 10) || 0;
+      var m = parseInt(document.getElementById('timeMinutes')?.value || '0', 10) || 0;
+      var ms = (h * 60 + m) * 60000;
+      if (ms <= 0) { alert('請輸入大於 0 的時間'); return; }
+      if (window.ParentTimer && typeof window.ParentTimer.start === 'function') {
+        window.ParentTimer.start(ms);
+      } else {
+        console.error('ParentTimer 尚未就緒'); alert('計時器未就緒，請重新整理頁面');
+      }
+    }
+    function __uiStopTimer(){
+      if (window.ParentTimer && typeof window.ParentTimer.stop === 'function') {
+        window.ParentTimer.stop();
+      }
+    }
+  </script>
+
+  <!-- ⭐ 左側導覽 ScrollSpy（目前區塊自動高亮） -->
+  <script>
+    (function(){
+      const links = Array.from(document.querySelectorAll('.side-link'));
+      const sections = links
+        .map(a => document.getElementById(a.dataset.target))
+        .filter(Boolean);
+
+      // 點擊左欄連結：平滑捲動 + 主動設為 active（避免短瞬間未命中）
+      links.forEach(a => {
+        a.addEventListener('click', (e) => {
+          const id = a.dataset.target;
+          const el = document.getElementById(id);
+          if (el){
+            e.preventDefault();
+            el.scrollIntoView({ behavior:'smooth', block:'start' });
+            setActive(id);
+            history.replaceState(null, '', '#'+id);
+          }
+        });
+      });
+
+      function setActive(id){
+        links.forEach(a => a.classList.toggle('active', a.dataset.target === id));
+      }
+
+      // 使用 IntersectionObserver：偵測最靠近視窗上緣的區段
+      const opts = {
+        root: null,
+        // 上方保留導覽列高度 + 一點緩衝；下方減少一半視窗，避免過早切換
+        rootMargin: '-96px 0px -55% 0px',
+        threshold: [0, 0.25, 0.5, 0.75, 1]
+      };
+      let current = null;
+      const io = new IntersectionObserver((entries)=>{
+        // 取「可視比例最高」且 isIntersecting 的 section
+        const vis = entries
+          .filter(e => e.isIntersecting)
+          .sort((a,b)=> b.intersectionRatio - a.intersectionRatio)[0];
+        if (!vis) return;
+        const id = vis.target.id;
+        if (id && id !== current){
+          current = id;
+          setActive(id);
+        }
+      }, opts);
+
+      sections.forEach(sec => io.observe(sec));
+
+      // 初次載入：若有 hash 就對應高亮
+      window.addEventListener('load', ()=>{
+        const hash = (location.hash||'').replace('#','');
+        if (hash && document.getElementById(hash)) setActive(hash);
+        else setActive(sections[0]?.id);
+      });
+
+      // 滾動到頁頂時，也保守選擇第一個
+      window.addEventListener('scroll', ()=>{
+        if (window.scrollY < 120) setActive(sections[0]?.id);
+      });
+    })();
+  </script>
+  <script>
+  // 1) 重新聚焦頁籤就刷新自訂清單（避免使用者改名後切回來還是舊的）
+  window.addEventListener('visibilitychange', ()=>{
+    if (!document.hidden) { try{ loadCustomSets(); }catch(e){} }
+  });
+
+  // 2) 若你在改名頁面有發出這個事件，也能即時刷新
+  window.addEventListener('custom-set-title-updated', ()=>{
+    try{ loadCustomSets(); }catch(e){}
+  });
+
+  // 3) 或用 localStorage 當橋樑（在改名處 setItem，同頁監聽 storage 事件）
+  window.addEventListener('storage', (e)=>{
+    if (e.key === 'custom.set.title.updated' && e.newValue === '1'){
+      localStorage.removeItem('custom.set.title.updated');
+      try{ loadCustomSets(); }catch(e){}
+    }
+  });
+</script>
+
+</body>
+</html>

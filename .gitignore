@@ -1,0 +1,46 @@
+# ===== Python venv =====
+.venv310/
+services/ai/venv/
+
+# ===== Environment =====
+.env
+# 忽略所有 env 檔，但保留 example
+.env.*
+!.env.example
+services/**/.env
+!services/**/.env.example
+
+# ===== Python Cache & Logs =====
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
+
+# Python / venv
+venv/
+__pycache__/
+*.pyc
+
+# 本地上傳與模型/暫存
+services/ai/uploads/
+*.sav
+*.wav
+*.mp4
+*.mov
+*.avi
+*.webm
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.webp
+
+# 其他常見大型/編譯產物
+*.whl
+*.tar.gz
+*.zip
+.DS_Store.venv/
+.venv/
+
+services/quiz/.round_counter

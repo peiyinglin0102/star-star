@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8" />
+  <title>星星註冊</title>
+  <style>
+    body {
+      margin: 0;
+      background-color: #f5f5f5;
+      font-family: "微軟正黑體", sans-serif;
+      background-image: url('{{ url_for('static', filename='5.png') }}');
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-attachment: fixed;
+    }
+
+    .banner {
+      display: block;
+      background: linear-gradient(to top, rgba(230, 230, 230, 0), rgb(182, 240, 245));
+      padding: 15px 20px;
+      font-size: 24px;
+      font-weight: bold;
+      color: #603d2b;
+      text-decoration: none;
+    }
+
+    .wrapper {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 30px 0;
+    }
+
+    .form-box {
+      background-color: white;
+      border-radius: 10px;
+      width: 340px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+      padding: 30px 20px;
+    }
+
+    .form-box h2 {
+      text-align: center;
+      margin-bottom: 20px;
+      font-size: 22px;
+    }
+
+    /* 頭像選擇區塊 */
+    .avatar-list {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .avatar-option {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background-size: cover;
+      background-position: center;
+      cursor: pointer;
+      border: 3px solid transparent;
+      transition: border 0.2s;
+    }
+
+    .avatar-option.selected {
+      border: 3px solid #da9c20;
+    }
+
+    .form-group { margin-bottom: 16px; position: relative; }
+
+    input, select {
+      width: 100%;
+      padding: 10px 12px;
+      border: none;
+      border-radius: 6px;
+      background-color: #eee;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+
+    input::placeholder { color: #555; }
+
+    .form-group .hint {
+      font-size: 12px;
+      color: gray;
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+
+    .btn {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 8px 16px;
+      background-color:#da9c20;
+      border: none;
+      border-radius: 5px;
+      font-weight: bold;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .register-btn {
+      width: 100%;
+      padding: 10px;
+      background-color:#da9c20;
+      color: black;
+      border: none;
+      font-weight: bold;
+      font-size: 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 20px;
+    }
+
+    #verifySection { margin-top: 12px; margin-bottom: 20px; }
+    /* ======== 手機版（<=768px）專用：不影響電腦版 ======== */
+@media (max-width: 768px){
+  /* 上方橫幅固定 + 縮小字級與間距 */
+  .banner{
+    position: fixed; top: 0; left: 0; right: 0;
+    padding: 12px 16px;
+    font-size: 20px;
+    z-index: 1000;
+    background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,255,255,0));
+    backdrop-filter: blur(2px);
+  }
+
+  /* 內容往下推，避免被固定的 banner 蓋住 */
+  .wrapper{
+    min-height: calc(100vh - 80px);
+    padding: calc(72px + env(safe-area-inset-top)) 0 24px;
+    align-items: flex-start;
+  }
+
+  /* 卡片寬度改用螢幕比例，置中顯示 */
+  .form-box{
+    width: min(92vw, 360px);
+    padding: 20px 16px;
+    border-radius: 12px;
+  }
+
+  .form-box h2{ font-size: 20px; margin-bottom: 14px; }
+
+  /* 頭像改成 3 欄網格，點擊區更好按 */
+  .avatar-list{
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 12px; justify-items: center;
+    margin-bottom: 16px;
+  }
+  .avatar-option{
+    width: 56px; height: 56px; border-width: 2px;
+  }
+
+  /* iOS 避免輸入時自動放大：字級 >=16px */
+  input, select{ font-size: 16px; padding: 12px; }
+
+  /* 欄位間距縮小一點 */
+  .form-group{ margin-bottom: 12px; }
+
+  /* Email + 發送驗證碼在手機改為直式堆疊，避免擠在一行 */
+  #registerEmail{ margin-bottom: 8px; }
+  .form-group .btn{
+    width: 100%;
+    display: block;
+    margin-top: 0;
+    padding: 10px 12px;
+    font-size: 16px;
+  }
+
+  /* 驗證區塊與主按鈕 */
+  #verifySection{ margin: 8px 0 16px; }
+  .register-btn{
+    padding: 12px; font-size: 16px; border-radius: 10px;
+  }
+
+  /* 底部留出安全區 */
+  body{ padding-bottom: env(safe-area-inset-bottom); }
+}
+/* 仍維持整頁不滾動 */
+html, body{ height:100%; overflow:hidden; }
+
+/* ========== 桌機 (≥1024px)：卡片變窄、整體上移一點、頭貼一排 ========== */
+@media (min-width:1024px){
+  .wrapper{
+    height: calc(100vh - 140px);
+    padding: 16px 0 40px;      /* 底部別貼死 */
+    align-items: center;
+  }
+  .form-box{
+    width: 560px;              /* ← 原本偏寬，縮到 560 */
+    padding: 22px 20px;
+    transform: translateY(-14px);
+    overflow: visible;
+  }
+  .form-box > .form-scroll{ max-height: none !important; overflow: visible !important; }
+
+  .form-box h2{ font-size: 26px; margin-bottom: 14px; }
+
+  /* 頭貼固定一排且更緊湊 */
+  .avatar-list{ display:flex; flex-wrap:nowrap; justify-content:center; gap:12px; margin: 6px 0 10px; }
+  .avatar-option{ width:56px; height:56px; }
+}
+
+/* ========== 平板 (769–1023px)：中等寬度 ========== */
+@media (min-width:769px) and (max-width:1023px){
+  .wrapper{ height: calc(100vh - 140px); padding: 16px 0 36px; align-items: center; }
+  .form-box{ width: 600px; padding: 20px 18px; transform: translateY(-10px); }
+  .avatar-list{ display:flex; flex-wrap:nowrap; justify-content:center; gap:12px; margin: 6px 0 10px; }
+  .avatar-option{ width:54px; height:54px; }
+}
+
+/* ========== 手機 (≤768px)：卡片更小、頭貼更緊、按鈕不被擋 ========== */
+@media (max-width:768px){
+  .banner{
+    position:fixed; top:0; left:0; right:0; z-index:1000;
+    padding:12px 16px; font-size:20px;
+    background:linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,255,255,0));
+    backdrop-filter: blur(2px);
+  }
+
+  .wrapper{
+    height: calc(100vh - (64px + env(safe-area-inset-top)));
+    padding: calc(64px + env(safe-area-inset-top)) 0 0;
+    align-items: flex-start;
+  }
+
+  .form-box{
+    width: min(92vw, 340px);      /* 卡片縮小 */
+    padding: 16px 14px;
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .form-box h2{ font-size:22px; margin-bottom:10px; }
+
+  /* 頭貼：3 欄、更小、更密 */
+  .avatar-list{
+    display:grid; grid-template-columns: repeat(3, 1fr);
+    gap:10px; justify-items:center; margin: 4px 0 8px;
+  }
+  .avatar-option{ width:52px; height:52px; border-width:2px; }
+
+  /* 提示字縮一點 */
+  #avatarHint{ font-size:13px; margin: 4px 0 12px; }
+
+  /* 只有卡片內容可捲動，頁面不捲；底部預留空間給按鈕 */
+  .form-box > .form-scroll{
+    max-height: calc(100vh - (210px + env(safe-area-inset-top)));
+    overflow:auto; -webkit-overflow-scrolling:touch;
+    padding-bottom: calc(76px + env(safe-area-inset-bottom));
+  }
+
+  /* 發送驗證碼→整行，避免擠到 */
+  .form-group .btn{ width:100%; display:block; padding:10px 12px; font-size:16px; margin-top:8px; }
+  #registerEmail{ margin-bottom:8px; }
+
+  /* 註冊按鈕黏可視區，不會被底部工具列/手勢條擋住 */
+  .register-btn{
+    position: sticky;
+    bottom: calc(8px + env(safe-area-inset-bottom));
+    z-index: 2;
+    margin-top: 10px;
+    padding: 12px;
+    border-radius: 10px;
+  }
+
+  /* iOS 防放大 */
+  input, select{ font-size:16px; padding:12px; }
+}
+
+  </style>
+</head>
+<body>
+  <a href='{{ url_for("index") }}' class="banner">星星的世界</a>
+
+  <div class="wrapper">
+<div class="form-box">
+  <h2>星星註冊</h2>
+
+  <!-- 讓卡片內容可在必要時自身滾動，不影響整頁不滾動 -->
+  <div class="form-scroll">
+
+    <!-- 頭像選擇區塊 -->
+    <div class="avatar-list">
+      <div class="avatar-option" style="background-image:url('{{ url_for('static', filename='avatars/1.png') }}')" onclick="selectAvatar('1.png', event)" title="點選選取"></div>
+      <div class="avatar-option" style="background-image:url('{{ url_for('static', filename='avatars/2.png') }}')" onclick="selectAvatar('2.png', event)" title="點選選取"></div>
+      <div class="avatar-option" style="background-image:url('{{ url_for('static', filename='avatars/3.png') }}')" onclick="selectAvatar('3.png', event)" title="點選選取"></div>
+      <div class="avatar-option" style="background-image:url('{{ url_for('static', filename='avatars/4.png') }}')" onclick="selectAvatar('4.png', event)" title="點選選取"></div>
+      <div class="avatar-option" style="background-image:url('{{ url_for('static', filename='avatars/5.png') }}')" onclick="selectAvatar('5.png', event)" title="點選選取"></div>
+      <div class="avatar-option" style="background-image:url('{{ url_for('static', filename='avatars/6.png') }}')" onclick="selectAvatar('6.png', event)" title="點選選取"></div>
+    </div>
+    <p id="avatarHint" style="text-align:center;color:#8b6b55;margin:6px 0 16px;font-size:14px;">
+      請先選擇一個頭貼（選定後將<strong>無法更換</strong>）
+    </p>
+
+    <input type="hidden" id="selectedAvatar" value="">
+
+      <div class="form-group">
+        <input type="text" id="reg_name" placeholder="暱稱">
+      </div>
+
+      <div class="form-group">
+        <input type="text" id="reg_birthday" placeholder="年 / 月 / 日"
+               onfocus="(this.type='date')" onblur="if(this.value===''){this.type='text'}">
+      </div>
+
+      <div class="form-group">
+        <select id="reg_gender" required>
+          <option value="" disabled selected hidden>性別</option>
+          <option value="male">男</option>
+          <option value="female">女</option>
+          <option value="other">其他</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <input type="password" id="reg_password" placeholder="密碼">
+        <span class="hint">英+數字 8–12 碼，含大小寫</span>
+      </div>
+
+      <div class="form-group">
+        <input type="email" id="registerEmail" placeholder="請輸入信箱">
+        <button class="btn" id="sendCodeBtn" onclick="sendVerification()">發送驗證碼</button>
+      </div>
+      <p id="sendCodeHint" style="display:none;color:#666;margin-top:-10px;margin-bottom:10px;">
+        驗證碼與連結有效 <b>120 秒</b>，逾時請重新發送。
+      </p>
+
+      <div id="verifySection" style="display:none;">
+        <div class="form-group">
+          <input type="text" id="inputCode" placeholder="輸入 6 碼驗證碼">
+          <button class="btn" onclick="verifyOtp()">確認驗證</button>
+        </div>
+      </div>
+
+      <button class="register-btn" onclick="submitRegister()">註冊</button>
+    </div>
+  </div>
+
+  <script>
+    // 選擇頭像
+    function selectAvatar(filename) {
+      document.getElementById("selectedAvatar").value = filename;
+      document.querySelectorAll(".avatar-option").forEach(el => el.classList.remove("selected"));
+      event.target.classList.add("selected");
+    }
+
+    // ===== 倒數 & 按鈕鎖定 =====
+    let countdownTimer = null;
+    function startCountdown(seconds) {
+      const btn = document.getElementById('sendCodeBtn');
+      const label = document.getElementById('sendCodeHint');
+      let remain = seconds;
+      btn.disabled = true;
+      btn.textContent = `重新發送 (${remain}s)`;
+      label.style.display = 'block';
+      countdownTimer = setInterval(() => {
+        remain -= 1;
+        if (remain <= 0) {
+          clearInterval(countdownTimer);
+          btn.disabled = false;
+          btn.textContent = '發送驗證碼';
+          label.style.display = 'none';
+          return;
+        }
+        btn.textContent = `重新發送 (${remain}s)`;
+      }, 1000);
+    }
+
+    let _regToken = null;
+
+    async function sendVerification() {
+      const name = document.getElementById('reg_name').value.trim();
+      const birthday = document.getElementById('reg_birthday').value.trim();
+      const gender = document.getElementById('reg_gender').value;
+      const email = document.getElementById('registerEmail').value.trim();
+      const password = document.getElementById('reg_password').value;
+      const avatar = document.getElementById('selectedAvatar').value;
+
+      if (!name || !birthday || !gender || !email || !password || !avatar) {
+        alert('請先完整填寫上方欄位並選擇頭像，再發送驗證信。');
+        return;
+      }
+
+      try {
+        const resp = await fetch('{{ url_for("auth.api_register") }}', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, birthday, gender, email, password, avatar })
+        });
+        const data = await resp.json();
+        if (!resp.ok || !data.ok) {
+          alert(data.msg || '寄送驗證信失敗');
+          return;
+        }
+        _regToken = data.token;
+        document.getElementById('verifySection').style.display = 'block';
+        alert('已寄出驗證信，請在 120 秒內完成驗證。');
+        startCountdown(120);
+      } catch (e) {
+        alert('網路錯誤，請稍後再試');
+      }
+    }
+
+    async function verifyOtp() {
+      const otp = (document.getElementById('inputCode').value || '').trim();
+      if (!_regToken) { alert('請先發送驗證碼'); return; }
+      if (!otp) { alert('請輸入驗證碼'); return; }
+
+      try {
+        const resp = await fetch('{{ url_for("auth.api_verify_otp") }}', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: _regToken, otp })
+        });
+        const data = await resp.json();
+        if (!resp.ok || !data.ok) {
+          alert(data.msg || '驗證失敗或已過期');
+          return;
+        }
+        alert('驗證成功，帳號已建立，請登入！');
+        window.location.href = '{{ url_for("auth.login_page") }}';
+      } catch (e) {
+        alert('網路錯誤，請稍後再試');
+      }
+    }
+
+    function submitRegister() {
+      alert('請先完成信箱驗證');
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,1093 @@
+<!-- templates/USER/Teach.html -->
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>星星操作小教室</title>
+  <link href="https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe:wght@400;700&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --angry:#ff4d4d; --disgust:#a1c349; --fear:#594f8d;
+      --happy:#ffe35b; --sad:#4b79c9; --surprise:#ffa657;
+      --on-dark:#ffffff; --on-light:#2b2b2b;
+      --glass:#ffffffea; --glass-soft:#ffffffcc;
+      --panel-border:#0000002a; --chip-border:#00000020;
+      --shadow:0 8px 20px rgba(0,0,0,.15);
+      --shadow-soft:0 4px 12px rgba(0,0,0,.12);
+    }
+
+    body{
+      margin:0; font-family:'Noto Sans TC',"微軟正黑體",sans-serif;
+      background:#f5f5f5 url('{{ url_for("static", filename="teach/6.png") }}') center/cover no-repeat fixed;
+      color:#222; font-size:17px; overflow-x:hidden;
+      background-size: cover; background-position: center; background-repeat: no-repeat; background-attachment: fixed;
+    }
+
+    /* === 導覽列：與 User_Home.html 完全一致 === */
+    .navbar {
+      background: linear-gradient(to top, rgba(230,230,230,0), rgb(182,240,245));
+      padding: 30px 24px; display: flex; justify-content: space-between; align-items: center;
+      position: sticky; top: 0; z-index: 1000;
+    }
+    .logo { font-size: 55px; font-weight: bold; color: #603d2b; cursor: pointer; font-family: 'ZCOOL KuaiLe', sans-serif; }
+    .nav-links { display: flex; align-items: center; gap: 40px; }
+    .nav-links a { text-decoration: none; font-size: 24px; font-weight: bold; color:#603d2b; transition: color 0.3s; font-family: "ZCOOL KuaiLe",sans-serif; }
+    .nav-links a:hover { color: #f3b340; }
+    .login-out { background-color: white; border: 2px solid #999; border-radius: 30px; padding: 8px 20px; cursor: pointer; font-weight: bold; transition: background-color 0.3s; }
+    .login-out:hover { background-color: #f3b340; color: white; }
+
+    /* 設定按鈕（與首頁一致） */
+    .nav-settings{
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 44px; height: 44px; border-radius: 12px; border: 2px solid #c9b9a8;
+      background: #fff9e8; cursor: pointer; transition: all .2s ease;
+      box-shadow: 0 6px 12px rgba(0,0,0,.06);
+    }
+    .nav-settings:hover{ background:#fbe1a8; transform: translateY(-1px); }
+
+    /* 手機漢堡選單（與首頁一致） */
+    .hamburger{ display:none; }
+    .mobile-menu, .mobile-menu-backdrop{ display:none; }
+    .mobile-menu.active{ display:block; }
+    .mobile-menu-backdrop.active{ display:block; }
+
+    @media (max-width: 768px){
+      body{
+        background-image: url('{{ url_for('static', filename='phone2.jpg') }}') !important;
+        background-size: cover !important; background-position: center bottom !important;
+        background-repeat: no-repeat !important; background-attachment: scroll !important;
+        overflow-x: hidden !important;
+      }
+      .navbar{
+        position: fixed !important; top: 0; left: 0; right: 0;
+        padding: 12px 16px !important;
+        background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,255,255,0)) !important;
+        backdrop-filter: blur(2px); z-index: 1200;
+      }
+      .logo{ font-size: 28px !important; }
+      .nav-links{ display: none !important; }
+
+      .hamburger{
+        display: inline-flex; align-items:center; justify-content:center;
+        width: 44px; height: 44px; border-radius: 12px; border: 2px solid #c9b9a8;
+        background: #fff9e8; cursor: pointer; transition: all .2s ease;
+        box-shadow: 0 6px 12px rgba(0,0,0,.06); z-index: 1400;
+      }
+      .hamburger:hover{ background:#fbe1a8; transform: translateY(-1px); }
+
+      .mobile-menu{
+        position: fixed; top: 64px; right: 12px;
+        width: min(380px, calc(100dvw - 24px));
+        max-height: calc(100dvh - 88px);
+        overflow-y: auto; overflow-x: hidden; box-sizing: border-box;
+        background: #ffffffee; border: 1px solid #f0e2c4; border-radius: 16px;
+        box-shadow: 0 16px 36px rgba(0,0,0,.18); padding: 8px; z-index: 1300; backdrop-filter: blur(4px);
+      }
+      .mobile-menu a, .mobile-menu button{
+        display: flex; align-items: center; gap: 10px; width: 100%; box-sizing: border-box;
+        padding: 12px 14px; font-size: 16px; font-weight: 700; color: #603d2b;
+        background: #fff; border: 1px solid #f0e2c4; border-radius: 12px; margin: 6px 0; text-decoration: none;
+        box-shadow: 0 6px 14px rgba(0,0,0,.05); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        justify-content: center; text-align:center; gap:8px;
+      }
+      .mobile-menu a:active, .mobile-menu button:active{ transform: scale(.99); }
+      .mobile-menu .logout{ background:#f3b340 !important; color:#fff !important; border:1px solid #f3b340 !important; box-shadow: 0 6px 14px rgba(243,179,64,.25); }
+      .mobile-menu .logout:hover{ filter:brightness(1.05); }
+      .mobile-menu .logout:active{ transform: scale(.99); }
+
+      .mobile-menu-backdrop{ position: fixed; inset: 0; background: rgba(0,0,0,.25); z-index: 1250; }
+
+      .mobile-menu-title{
+        position: sticky; top: 0;
+        background: #fffdf6; color:#603d2b; font-weight: 900; font-size: 18px;
+        letter-spacing: .5px; text-align: center; padding: 12px 12px 14px;
+        margin: -8px -8px 10px; border-top-left-radius: 16px; border-top-right-radius: 16px;
+        box-shadow: inset 0 -1px 0 #f0e2c4; z-index: 1;
+      }
+    }
+
+    /* —— Teach 主內容（原樣保留） —— */
+    .container{ max-width:1040px; margin:30px auto; padding:0 20px; }
+    h2{ text-align:center; margin-bottom:26px; font-size:30px; color:#333; font-weight:900; }
+
+    .tabs{ display:flex; justify-content:center; gap:14px; margin-bottom:26px; flex-wrap:wrap; }
+    .tab{ padding:12px 26px; border-radius:26px; background:#fff; border:2px solid #f3b340;
+          font-weight:800; color:#603d2b; cursor:pointer; transition:.2s; font-size:18px; box-shadow: var(--shadow-soft); }
+    .tab:hover{ transform:translateY(-1px); }
+    .tab.active{ background:#f3b340; color:#fff; }
+
+    .tab-content{ display:none; animation:fadeIn .3s ease; }
+    .tab-content.active{ display:block; }
+    @keyframes fadeIn{ from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:translateY(0)} }
+
+    .video-grid{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:22px; }
+    @media (max-width:980px){ .video-grid{ grid-template-columns:repeat(2,minmax(0,1fr)); } }
+    @media (max-width:640px){ .video-grid{ grid-template-columns:1fr; } }
+    .video-card{ position:relative; background:var(--glass); border-radius:16px; box-shadow:var(--shadow-soft); overflow:hidden; padding-bottom:10px; border:1px solid #00000014; }
+    .video-title{ text-align:center; font-weight:800; font-size:18px; margin:12px 0; }
+    .video-frame{ width:100%; aspect-ratio:16/9; border:none; display:block; }
+
+    .emo-table{ display:grid; grid-template-columns:repeat(3,1fr); gap:20px; }
+    @media (max-width:980px){ .emo-table{ grid-template-columns:repeat(2,1fr);} }
+    @media (max-width:640px){ .emo-table{ grid-template-columns:1fr;} }
+
+    .emo-box{ position:relative; border-radius:22px; overflow:hidden; box-shadow:var(--shadow);
+              display:flex; flex-direction:column; border:1px solid #00000022;
+              color:var(--on-dark); transform:translateY(0); transition: transform .2s ease, box-shadow .2s ease; background:#fff; }
+    .emo-box:hover{ transform:translateY(-4px); box-shadow:0 16px 28px rgba(0,0,0,.18); }
+    .emo-body{ padding:18px 16px 22px; display:flex; flex-direction:column; gap:14px; align-items:center; text-align:center; }
+
+    .topic-chip{ display:flex; flex-direction:column; align-items:center; gap:6px; background:none; border:none; box-shadow:none;
+                 text-align:center; line-height:1.1; margin-bottom:4px; color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.25); }
+    .topic-chip .emoji{ font-size:42px; line-height:1; }
+    .topic-chip .title-zh{ font-size:28px; font-weight:900; letter-spacing:.5px; }
+    .topic-chip .chip-sub{ font-size:15px; font-weight:800; opacity:.95; }
+
+    .theme-happy .topic-chip,.theme-surprise .topic-chip,.theme-disgust .topic-chip,
+    .scene-social .topic-chip,.scene-habit .topic-chip,.scene-emotion .topic-chip,.scene-manners .topic-chip{
+      color:#222; text-shadow:none;
+    }
+
+    .emo-illustration,.scene-illustration{ width:100%; background:transparent; border:none; border-radius:14px; display:flex; justify-content:center; align-items:center; overflow:hidden; }
+    .emo-illustration{ aspect-ratio:auto; }
+    .emo-illustration img{ width:auto; height:100%; max-height:280px; object-fit:contain; display:block; }
+
+    .panel{ width:100%; background:var(--glass-soft); border:2px solid var(--panel-border); border-radius:12px; overflow:hidden; text-align:left; box-shadow: inset 0 1px 0 rgba(255,255,255,.5); }
+    .panel-head{ background:rgba(0,0,0,.06); padding:10px 14px; font-weight:900; color:#222; font-size:16px; border-bottom:2px solid rgba(0,0,0,.12); letter-spacing:.5px; }
+    .panel-body{ padding:14px 14px 16px; color:#222; font-weight:700; font-size:17px; background:linear-gradient(180deg,#ffffffb8,#ffffffa2); }
+    .example-list{ margin:8px 0 0 0; padding-left:22px; }
+    .example-list li{ margin:4px 0; font-size:17px; font-weight:800; }
+    .example-list li::marker{ content:"✔  "; }
+
+    .theme-angry{ background:var(--angry); }
+    .theme-disgust{ background:var(--disgust); color:#1e2a1e; }
+    .theme-fear{ background:var(--fear); }
+    .theme-happy{ background:var(--happy); color:var(--on-light); }
+    .theme-sad{ background:var(--sad); }
+    .theme-surprise{ background:var(--surprise); color:#222; }
+    .scene-social{  background:#7cc0ff; color:#0e2431; }
+    .scene-safety{  background:#ff8a8a; color:#ffffff; }
+    .scene-habit{   background:#ffd88a; color:#2b2b2b; }
+    .scene-body{    background:#bca9ff; color:#ffffff; }
+    .scene-emotion{ background:#ffb372; color:#222222; }
+    .scene-manners{ background:#8ad4b0; color:#123326; }
+
+    /* 系統設定 Modal（與首頁一致） */
+    .sysset-modal{
+      position: fixed; inset: 0; background: rgba(0,0,0,.35);
+      display: none; align-items: center; justify-content: center;
+      z-index: 2000; padding: 18px;
+    }
+    .sysset-modal[aria-hidden="false"]{ display: flex; }
+    .sysset-dialog{
+      width: min(720px, 92vw);
+      background: #fffef8; border: 2px solid #f3deb7; border-radius: 18px;
+      box-shadow: 0 24px 60px rgba(0,0,0,.22);
+      overflow: hidden; animation: sysset-pop .12s ease-out;
+    }
+    @keyframes sysset-pop{ from{ transform: scale(.98); opacity:.5 } to{ transform: scale(1); opacity:1 } }
+    .sysset-header{ display:flex; align-items:center; justify-content:space-between; padding:14px 16px; background: linear-gradient(180deg,#fff7dc,#fffef6); border-bottom: 1px solid #f0e2c4; }
+    .sysset-header h3{ margin:0; color:#603d2b; font-size:20px; letter-spacing:.5px; }
+    .sysset-close{ border:none; background:transparent; cursor:pointer; font-size:20px; padding:6px 10px; border-radius:10px; color:#603d2b; }
+    .sysset-close:hover{ background:#fff0cc; }
+    .sysset-body{ padding: 16px; display:grid; gap:16px; }
+    .sysset-card{ background:#ffffff; border: 1px solid #f0e2c4; border-radius:14px; padding:14px; box-shadow: 0 10px 24px rgba(0,0,0,.05); }
+    .sysset-card h4{ margin: 0 0 6px; color:#603d2b; }
+    .sysset-hint{ color:#8b6b55; margin:.25rem 0 .75rem; }
+    .sysset-grid{ display:grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .sysset-grid label{ display:grid; gap:6px; font-size:14px; color:#6b4b35; }
+    .sysset-grid input{ padding:10px 12px; border:1px solid #e8d9b8; border-radius:12px; font-size:16px; background:#fffef8; }
+    .sysset-actions{ display:flex; gap:10px; margin-top:8px; }
+    .sysset-primary{ background:#f3b340; color:#fff; border:none; border-radius:12px; padding:10px 14px; cursor:pointer; box-shadow: 0 6px 14px rgba(243,179,64,.35); }
+    .sysset-primary:hover{ filter: brightness(1.05); }
+    .sysset-ghost{ background:#fff8e6; color:#8b6b35; border:1px solid #f0e2c4; border-radius:12px; padding:10px 14px; cursor:pointer; }
+    .sysset-ghost:hover{ background:#ffefc8; }
+    .sysset-status{ margin-top:8px; font-weight:700; color:#603d2b; }
+    .sysset-slider-row{ display:flex; align-items:center; gap:12px; }
+    .sysset-slider-row input[type="range"]{ width:100%; accent-color:#f3b340; }
+    .sysset-row{ display:flex; align-items:center; gap:12px; margin-top:8px; color:#603d2b; }
+
+    /* 手機：內容調整（保留你原本 Teach 的版面縮放） */
+    @media (max-width: 768px){
+      .container{ width: min(920px, 92%) !important; margin: 10px auto 56px !important; padding: 0 10px !important; }
+      .tabs{ flex-wrap: wrap; gap: 10px; margin-top: 4px; }
+      .tab{ flex: 1 1 calc(50% - 10px); text-align: center; padding: 10px 12px !important; font-size: 16px !important; }
+      .emo-table{ grid-template-columns: 1fr !important; gap: 14px !important; }
+      .emo-box{ border-radius: 16px !important; }
+      .emo-body{ padding: 12px 12px 14px !important; gap: 10px !important; }
+      .emo-illustration{ aspect-ratio: 4/3 !important; }
+      .topic-chip .emoji{ font-size: 32px !important; }
+      .topic-chip .title-zh{ font-size: 20px !important; }
+      .topic-chip .chip-sub{ font-size: 13px !important; }
+      .video-grid{ grid-template-columns: 1fr !important; gap: 14px !important; }
+      .video-frame{ height: 210px !important; }
+      .panel-head{ font-size: 15px !important; padding: 8px 10px !important; }
+      .panel-body{ font-size: 15px !important; padding: 10px 10px 12px !important; }
+    }
+
+    /* Toast & 中央警示（保留） */
+    .sysset-toast{ position: fixed; left: 50%; bottom: 100px; transform: translateX(-50%); background:#111827; color:#fff; padding: 10px 14px; border-radius: 10px; box-shadow: 0 10px 24px rgba(0,0,0,.25); z-index: 2001; }
+    .sysset-center-warn{ position: fixed; inset: 0; display: none; align-items: center; justify-content: center; z-index: 3000; background: rgba(0,0,0,.35); }
+    .sysset-center-warn.active{ display: flex; }
+    .sysset-center-box{ max-width: min(88vw, 600px); padding: 18px 22px; border-radius: 16px; background: #111827; color: #fff; font-size: clamp(20px, 3.4vw, 28px); line-height: 1.35; text-align: center; box-shadow: 0 16px 48px rgba(0,0,0,.35); }
+
+    /* 朗讀鍵樣式（保留） */
+/* 朗讀鍵樣式（左側垂直排列） */
+.card-ctrl{
+  position:absolute;
+  left:10px;
+  top:10px;
+  display:flex;
+  flex-direction:column;   /* 垂直排列 */
+  gap:8px;
+  z-index:2;
+  align-items:flex-start;  /* 靠左對齊 */
+}
+.speak-btn,.pause-btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  border:1px solid #e8d7a1;
+  background:#fff9e8;
+  padding:6px 10px;
+  border-radius:999px;
+  cursor:pointer;
+  font-weight:800;
+  color:#6b4b35;
+  box-shadow:0 6px 12px rgba(0,0,0,.05);
+  width:max-content;
+}
+.speak-btn:hover,.pause-btn:hover{ background:#ffefc8; }
+.speak-btn.is-speaking{ background:#ffeab3; border-color:#e0c675; }
+.speak-btn.is-speaking::after{
+  content:"";
+  position:absolute;
+  inset:-6px;
+  border-radius:999px;
+  border:2px solid rgba(243,179,64,.35);
+  animation:pulse 1.4s ease-out infinite;
+    pointer-events:none;        /* ← 關鍵1：讓光圈不擋滑鼠事件 */
+  z-index:-1;                 /* ← 關鍵2：把光圈層級放到按鈕底下 */
+}
+@keyframes pulse{
+  0%{ transform:scale(.9); opacity:.9; }
+  100%{ transform:scale(1.2); opacity:0; }
+}
+
+    /* —— 這裡改成置中，兩顆按鈕並排 —— */
+    .readall-bar{
+      display:flex; justify-content:center; align-items:center;
+      gap:12px; margin: 0 0 12px 0;
+    }
+    .readall-btn{
+      background:#fff9e8; border:1px solid #e8d7a1; color:#6b4b35;
+      padding:10px 18px; border-radius:999px; font-weight:900; cursor:pointer;
+      box-shadow:0 6px 12px rgba(0,0,0,.05);
+    }
+    .readall-btn:hover{ background:#ffefc8; }
+
+    /* 手機 Accordion（只用在〈使用手冊〉） */
+    .accordion{ display:none; }
+    .item{ border-radius:14px; border:1px solid #00000014; box-shadow: var(--shadow-soft); background:#fff; overflow:hidden; }
+    .item-btn{
+      width:100%; text-align:left; display:flex; align-items:center; justify-content:space-between;
+      gap:12px; padding:14px 16px; font-size:18px; font-weight:800; color:#603d2b; background:#fff; border:none; cursor:pointer;
+    }
+    .item-btn:hover{ background:#fff9ec; }
+    .item-btn .left{ display:flex; align-items:center; gap:10px; }
+    .item-btn .tag{ font-size:13px; font-weight:900; padding:4px 8px; border-radius:999px; border:1px solid #f3b340; background:#fff8e6; color:#8b6b35; }
+    .item-btn .chev{ transition: transform .15s ease; }
+    .item-btn[aria-expanded="true"] .chev{ transform: rotate(90deg); }
+    .item-panel[hidden]{ display:none; }
+    .item-panel{ padding:12px; background: linear-gradient(180deg,#ffffff,#fffdf7); border-top:1px dashed #f0e2c4; }
+
+    /* === 修正認識情境圖片比例：與認識情緒一致 === */
+    .scene-illustration {
+      aspect-ratio: auto;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+      border-radius: 14px;
+      background: transparent;
+    }
+    .scene-illustration img {
+      width: auto !important;
+      height: 100% !important;
+      max-height: 280px !important;
+      object-fit: contain !important;
+      display: block !important;
+    }
+    /* === Teach：手機修正（只影響 max-width:768px）=== */
+@media (max-width: 768px){
+
+  /* 1) 讓內容不被固定導覽列蓋住：拉高主容器頂部間距 */
+  .container{
+    /* 原本是 margin: 10px auto 56px; 再往下推，避開固定在頂的 .navbar */
+    margin-top: 96px !important;
+  }
+
+  /* 2) 分頁三顆按鈕（使用手冊 / 認識情緒 / 認識情境）改成一橫排、等寬同高 */
+  .tabs{
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;  /* 三等分 */
+    gap: 8px !important;
+    margin-bottom: 16px !important;
+  }
+  .tabs .tab{
+    width: 100% !important;
+    padding: 10px 8px !important;
+    font-size: 15px !important;
+    border-radius: 20px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important; /* 同高置中 */
+    min-height: 42px !important;       /* 視覺一致 */
+  }
+}
+
+  </style>
+</head>
+
+<body data-logout-url="{{ url_for('auth.logout') }}">
+  <!-- 與首頁相同：家長計時器 -->
+  <script src="{{ url_for('static', filename='js/parent_timer.js') }}?v=20251025-6"></script>
+
+  <!-- 導覽列（與 User_Home.html 完全一致） -->
+  <header class="navbar">
+    <div class="logo" onclick="location.href='{{ url_for('auth.home') }}'">星星的世界</div>
+    <nav class="nav-links">
+      <a href="{{ url_for('teach.page') }}">星星小教室</a>
+      <a href="{{ url_for('auth.profile_page') }}">星星資料</a>
+      <a href="{{ url_for('learn.learning_process') }}">星星旅程</a>
+      <button id="openSettings" class="nav-settings" title="系統設定" aria-label="系統設定">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" stroke="#603d2b" stroke-width="1.8"/>
+          <path d="M19 12a7 7 0 0 0-.07-.98l1.74-1.35-1.8-3.12-2.08.66a7 7 0 0 0-1.7-.98l-.3-2.17h-3.5l-.3 2.17a7 7 0 0 0-1.7.98l-2.08-.66-1.8 3.12L5.07 11A7 7 0 0 0 5 12c0 .33.02 .65.07 .98l-1.74 1.35 1.8 3.12 2.08-.66c.53 .41 1.1 .74 1.7 .98l.3 2.17h3.5l.3-2.17c.6-.24 1.17-.57 1.7-.98l2.08 .66 1.8-3.12L18.93 13c.05-.33.07-.65.07-.98Z" stroke="#603d2b" stroke-width="1.8"/>
+        </svg>
+      </button>
+      <button class="login-out" onclick="location.href='{{ url_for('auth.logout') }}'">登出</button>
+    </nav>
+
+    <!-- 手機：漢堡按鈕（桌機隱藏） -->
+    <button class="hamburger" id="mobileMenuBtn" aria-label="開啟選單" aria-expanded="false" aria-controls="mobileMenu">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M4 7h16M4 12h16M4 17h16" stroke="#603d2b" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    </button>
+  </header>
+
+  <!-- 手機：下拉選單 + 遮罩（與首頁一致） -->
+  <div class="mobile-menu-backdrop" id="mobileMenuBackdrop"></div>
+  <div class="mobile-menu" id="mobileMenu" role="menu" aria-hidden="true">
+    <div class="mobile-menu-title" role="heading" aria-level="1">功能選單</div>
+    <a href="{{ url_for('teach.page') }}" role="menuitem">🌟 星星小教室</a>
+    <a href="{{ url_for('auth.profile_page') }}" role="menuitem">🧒 星星資料</a>
+    <a href="{{ url_for('learn.learning_process') }}" role="menuitem">🗺️ 星星旅程</a>
+    <button type="button" id="mobileOpenSettings" role="menuitem" aria-label="系統設定">⚙️ 系統設定</button>
+    <button type="button" class="logout" id="mobileLogout" role="menuitem">登出</button>
+  </div>
+
+  <!-- 系統設定 Modal -->
+  <div id="sysSettingsModal" class="sysset-modal" aria-hidden="true">
+    <div class="sysset-dialog" role="dialog" aria-modal="true" aria-labelledby="sysset-title">
+      <div class="sysset-header">
+        <h3 id="sysset-title">系統設定</h3>
+        <button id="sysSettingsClose" class="sysset-close" aria-label="關閉">✕</button>
+      </div>
+      <div class="sysset-body">
+        <section class="sysset-card">
+          <h4>⏱ 使用時間控管</h4>
+          <p class="sysset-hint">家長可設定時長；倒數前 1 分鐘有語音提醒，時間到會自動登出。</p>
+          <div class="sysset-grid">
+            <label>小時
+              <input id="timeHours" type="number" min="0" max="12" step="1" value="0">
+            </label>
+            <label>分鐘
+              <input id="timeMinutes" type="number" min="0" max="720" step="1" value="30">
+            </label>
+          </div>
+          <div class="sysset-actions">
+            <button id="timerStart" class="sysset-primary" type="button" onclick="__uiStartTimer()">開始計時</button>
+            <button id="timerStop"  class="sysset-ghost"  type="button" onclick="__uiStopTimer()" disabled>停止計時</button>
+          </div>
+          <div class="sysset-status">剩餘時間：<span id="timeRemain">未開始</span></div>
+        </section>
+
+        <section class="sysset-card">
+          <h4>🗣️ 題庫語音播放速度</h4>
+          <p class="sysset-hint">調整全站語音朗讀速度（烏龜 ←→ 兔子）。</p>
+          <div class="sysset-slider-row">
+            <div class="sysset-row">
+              <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                <input id="ttsEnabled" type="checkbox"> 啟用題庫語音
+              </label>
+            </div>
+            <span aria-hidden="true">🐢</span>
+            <input id="ttsRate" type="range" min="0.50" max="2.00" step="0.01" inputmode="decimal">
+            <span aria-hidden="true">🐇</span>
+          </div>
+          <div class="sysset-row">
+            目前倍率：<span id="ttsRateLabel">1.0×</span>
+            <button id="ttsTest" class="sysset-ghost">試聽一句</button>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <!-- 提醒容器 -->
+  <div id="sysWarnToast" class="sysset-toast" hidden></div>
+  <div id="sysCenterWarn" class="sysset-center-warn" aria-hidden="true">
+    <div class="sysset-center-box" id="sysCenterWarnBox"></div>
+  </div>
+
+  <!-- 主內容 -->
+  <div class="container">
+    <div class="tabs" role="tablist">
+      <button class="tab" data-tab="manual"  role="tab" aria-selected="true">使用手冊</button>
+      <button class="tab" data-tab="emotion" role="tab" aria-selected="false">認識情緒</button>
+      <button class="tab" data-tab="scene"   role="tab" aria-selected="false">認識情境</button>
+    </div>
+<!-- 使用手冊 -->
+<section id="manual" class="tab-content">
+  <div class="video-grid">
+    <div class="video-card">
+      <iframe
+        class="video-frame"
+        src="https://www.youtube.com/embed/LGAd_naB4Fk?rel=0&modestbranding=1&playsinline=1"
+        title="自訂關卡教學"
+        loading="lazy"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        allowfullscreen></iframe>
+      <div class="video-title">自訂關卡教學</div>
+    </div>
+
+    <div class="video-card">
+      <iframe
+        class="video-frame"
+        src="https://www.youtube.com/embed/Qiw8eo1SgNk?rel=0&modestbranding=1&playsinline=1"
+        title="如何答題？"
+        loading="lazy"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        allowfullscreen></iframe>
+      <div class="video-title">如何答題？</div>
+    </div>
+
+    <div class="video-card">
+      <iframe
+        class="video-frame"
+        src="https://www.youtube.com/embed/6sOtcA8lQI4?rel=0&modestbranding=1&playsinline=1"
+        title="系統設定教學"
+        loading="lazy"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        allowfullscreen></iframe>
+      <div class="video-title">系統設定教學</div>
+    </div>
+  </div>
+
+  <!-- 手機 Accordion（單一組） -->
+  <div class="accordion" data-accordion="manual">
+    <div class="item">
+      <button class="item-btn" aria-expanded="false">
+        <span class="left"><span>▶️ 自訂關卡教學</span><span class="tag">教學影片</span></span><span class="chev">›</span>
+      </button>
+      <div class="item-panel" hidden>
+        <div class="video-card">
+          <iframe
+            class="video-frame"
+            src="https://www.youtube.com/embed/LGAd_naB4Fk?rel=0&modestbranding=1&playsinline=1"
+            title="自訂關卡教學"
+            loading="lazy"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowfullscreen></iframe>
+          <div class="video-title">自訂關卡教學</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="item">
+      <button class="item-btn" aria-expanded="false">
+        <span class="left"><span>▶️ 如何答題？</span><span class="tag">教學影片</span></span><span class="chev">›</span>
+      </button>
+      <div class="item-panel" hidden>
+        <div class="video-card">
+          <iframe
+            class="video-frame"
+            src="https://www.youtube.com/embed/Qiw8eo1SgNk?rel=0&modestbranding=1&playsinline=1"
+            title="如何答題？"
+            loading="lazy"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowfullscreen></iframe>
+          <div class="video-title">如何答題？</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="item">
+      <button class="item-btn" aria-expanded="false">
+        <span class="left"><span>▶️ 系統設定教學</span><span class="tag">教學影片</span></span><span class="chev">›</span>
+      </button>
+      <div class="item-panel" hidden>
+        <div class="video-card">
+          <iframe
+            class="video-frame"
+            src="https://www.youtube.com/embed/6sOtcA8lQI4?rel=0&modestbranding=1&playsinline=1"
+            title="系統設定教學"
+            loading="lazy"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowfullscreen></iframe>
+          <div class="video-title">系統設定教學</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+    <!-- 認識情緒 -->
+    <section id="emotion" class="tab-content">
+      <div class="readall-bar">
+        <button type="button" id="readAllEmotion" class="readall-btn">全部朗讀</button>
+        <button type="button" id="toggleAllEmotion" class="readall-btn" data-state="idle">全部暫停</button>
+      </div>
+      <div class="emo-table">
+        <!-- 六張卡片 -->
+        <div class="emo-box theme-happy">
+          <div class="card-ctrl"></div>
+          <div class="emo-body">
+            <div class="topic-chip">
+              <span class="emoji">😀</span>
+              <span class="title-zh">開心</span>
+              <span class="chip-sub">Happiness · 💛 黃色</span>
+            </div>
+            <div class="emo-illustration"><img src="{{ url_for('static', filename='teach/happy.png') }}" alt="開心"></div>
+            <div class="panel"><div class="panel-head">表情特徵</div><div class="panel-body"><ul class="example-list"><li>嘴巴上揚，微笑。</li><li>眼睛亮亮的。</li><li>感到心情愉悅，歡聲大笑。</li></ul></div></div>
+            <div class="panel"><div class="panel-head">可能發生的時候</div><div class="panel-body"><ul class="example-list"><li>吃到喜歡的食物。</li><li>玩到喜歡的玩具。</li><li>看到喜歡的人。</li></ul></div></div>
+          </div>
+        </div>
+
+        <div class="emo-box theme-sad">
+          <div class="card-ctrl"></div>
+          <div class="emo-body">
+            <div class="topic-chip">
+              <span class="emoji">😢</span>
+              <span class="title-zh">難過</span>
+              <span class="chip-sub">Sadness · 🔵 藍色</span>
+            </div>
+            <div class="emo-illustration"><img src="{{ url_for('static', filename='teach/sad.png') }}" alt="難過"></div>
+            <div class="panel"><div class="panel-head">表情特徵</div><div class="panel-body"><ul class="example-list"><li>眼睛想哭、會流淚。</li><li>嘴巴往下垂。</li><li>心裡覺得酸酸的。</li></ul></div></div>
+            <div class="panel"><div class="panel-head">可能發生的時候</div><div class="panel-body"><ul class="example-list"><li>玩具壞掉了。</li><li>跌倒受傷了。</li><li>想念家人、朋友。</li></ul></div></div>
+          </div>
+        </div>
+
+        <div class="emo-box theme-angry">
+          <div class="card-ctrl"></div>
+          <div class="emo-body">
+            <div class="topic-chip">
+              <span class="emoji">😠</span>
+              <span class="title-zh">生氣</span>
+              <span class="chip-sub">Anger · 🔴 紅色</span>
+            </div>
+            <div class="emo-illustration"><img src="{{ url_for('static', filename='teach/angry.png') }}" alt="生氣"></div>
+            <div class="panel"><div class="panel-head">表情特徵</div><div class="panel-body"><ul class="example-list"><li>眉毛皺皺的。</li><li>聲音變大、臉紅紅。</li><li>身體感到緊緊的。</li></ul></div></div>
+            <div class="panel"><div class="panel-head">可能發生的時候</div><div class="panel-body"><ul class="example-list"><li>玩具被搶走。</li><li>不能做想做的事。</li><li>被別人弄痛了。</li></ul></div></div>
+          </div>
+        </div>
+
+        <div class="emo-box theme-fear">
+          <div class="card-ctrl"></div>
+          <div class="emo-body">
+            <div class="topic-chip">
+              <span class="emoji">😨</span>
+              <span class="title-zh">害怕</span>
+              <span class="chip-sub">Fear · 🟣 紫灰</span>
+            </div>
+            <div class="emo-illustration"><img src="{{ url_for('static', filename='teach/fear.png') }}" alt="害怕"></div>
+            <div class="panel"><div class="panel-head">表情特徵</div><div class="panel-body"><ul class="example-list"><li>眼睛張很大。</li><li>身體想躲起來。</li><li>心跳快快的，身體會不自覺發抖。</li></ul></div></div>
+            <div class="panel"><div class="panel-head">可能發生的時候</div><div class="panel-body"><ul class="example-list"><li>聽到很大的聲音。</li><li>看到大狗或黑黑的地方。</li><li>一個人時覺得不安心。</li></ul></div></div>
+          </div>
+        </div>
+
+        <div class="emo-box theme-surprise">
+          <div class="card-ctrl"></div>
+          <div class="emo-body">
+            <div class="topic-chip">
+              <span class="emoji">😲</span>
+              <span class="title-zh">驚訝</span>
+              <span class="chip-sub">Surprise · 🟠 橘色</span>
+            </div>
+            <div class="emo-illustration"><img src="{{ url_for('static', filename='teach/surprise.png') }}" alt="驚訝"></div>
+            <div class="panel"><div class="panel-head">表情特徵</div><div class="panel-body"><ul class="example-list"><li>眼睛變大。</li><li>嘴巴張開開。</li><li>和被嚇到一樣。</li></ul></div></div>
+            <div class="panel"><div class="panel-head">可能發生的時候</div><div class="panel-body"><ul class="example-list"><li>突然有人出現。</li><li>看到很特別的東西。</li><li>收到禮物。</li></ul></div></div>
+          </div>
+        </div>
+
+        <div class="emo-box theme-disgust">
+          <div class="card-ctrl"></div>
+          <div class="emo-body">
+            <div class="topic-chip">
+              <span class="emoji">🤢</span>
+              <span class="title-zh">厭惡</span>
+              <span class="chip-sub">Disgust · 💚 綠色</span>
+            </div>
+            <div class="emo-illustration"><img src="{{ url_for('static', filename='teach/disgust.png') }}" alt="厭惡"></div>
+            <div class="panel"><div class="panel-head">表情特徵</div><div class="panel-body"><ul class="example-list"><li>鼻子皺皺的。</li><li>嘴巴歪歪的。</li><li>想離遠現在的地方。</li></ul></div></div>
+            <div class="panel"><div class="panel-head">可能發生的時候</div><div class="panel-body"><ul class="example-list"><li>聞到臭臭的味道。</li><li>看到髒髒的東西。</li><li>吃到不喜歡的食物。</li></ul></div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 認識情境 -->
+    <section id="scene" class="tab-content">
+      <div class="readall-bar">
+        <button type="button" id="readAllScene" class="readall-btn">全部朗讀</button>
+        <button type="button" id="toggleAllScene" class="readall-btn" data-state="idle">全部暫停</button>
+      </div>
+      <div class="emo-table">
+        <div class="emo-box scene-social">
+          <div class="card-ctrl"></div>
+          <div class="emo-body">
+            <div class="topic-chip"><span class="emoji">👫</span><span class="title-zh">社交規範</span><span class="chip-sub">Social Rules</span></div>
+            <div class="scene-illustration"><img src="{{ url_for('static', filename='teach/social.png') }}" alt="排隊"></div>
+            <div class="panel"><div class="panel-head">定義</div><div class="panel-body">和其他人互動，應該要維持有秩序、有禮貌的行為。</div></div>
+            <div class="panel"><div class="panel-head">範例</div><div class="panel-body"><ul class="example-list"><li>排隊要一個一個來，不能插隊。</li><li>朋友先到，要等輪到自己再玩。</li><li>借玩具前，先問「我可以玩這個玩具嗎？」</li></ul></div></div>
+          </div>
+        </div>
+
+        <div class="emo-box scene-safety">
+          <div class="card-ctrl"></div>
+          <div class="emo-body">
+            <div class="topic-chip"><span class="emoji">🛑</span><span class="title-zh">安全意識</span><span class="chip-sub">Safety</span></div>
+            <div class="scene-illustration"><img src="{{ url_for('static', filename='teach/security.png') }}" alt="過馬路"></div>
+            <div class="panel"><div class="panel-head">定義</div><div class="panel-body">避免危險、懂得保護自己的行為。</div></div>
+            <div class="panel"><div class="panel-head">範例</div><div class="panel-body"><ul class="example-list"><li>紅燈停、綠燈走，不可以闖紅燈。</li><li>過馬路先「停、看、聽」。</li><li>不追車，不突然跑出馬路。</li></ul></div></div>
+          </div>
+        </div>
+
+        <div class="emo-box scene-habit">
+          <div class="card-ctrl"></div>
+          <div class="emo-body">
+            <div class="topic-chip"><span class="emoji">🧼</span><span class="title-zh">生活習慣</span><span class="chip-sub">Habits</span></div>
+            <div class="scene-illustration"><img src="{{ url_for('static', filename='teach/habits.png') }}" alt="洗手刷牙"></div>
+            <div class="panel"><div class="panel-head">定義</div><div class="panel-body">日常自理與基礎生活技能。</div></div>
+            <div class="panel"><div class="panel-head">範例</div><div class="panel-body"><ul class="example-list"><li>吃飯前先洗手，手要洗乾淨。</li><li>刷牙要用牙膏，上下左右刷。</li><li>咳嗽或打噴嚏，用手肘遮住口鼻。</li></ul></div></div>
+          </div>
+        </div>
+
+        <div class="emo-box scene-body">
+          <div class="card-ctrl"></div>
+          <div class="emo-body">
+            <div class="topic-chip"><span class="emoji">🤒</span><span class="title-zh">身體覺察</span><span class="chip-sub">Body Awareness</span></div>
+            <div class="scene-illustration"><img src="{{ url_for('static', filename='teach/bodyawareness.png') }}" alt="肚子痛"></div>
+            <div class="panel"><div class="panel-head">定義</div><div class="panel-body">了解身體哪裡不舒服，並和爸爸媽媽、老師說。</div></div>
+            <div class="panel"><div class="panel-head">範例</div><div class="panel-body"><ul class="example-list"><li>肚子痛，立刻告訴大人或老師。</li><li>不舒服可以休息，喝水、慢慢來。</li><li>受傷了，請大人幫忙處理。</li></ul></div></div>
+          </div>
+        </div>
+
+        <div class="emo-box scene-emotion">
+          <div class="card-ctrl"></div>
+          <div class="emo-body">
+            <div class="topic-chip"><span class="emoji">🌬️</span><span class="title-zh">情緒管理</span><span class="chip-sub">Emotion Regulation</span></div>
+            <div class="scene-illustration"><img src="{{ url_for('static', filename='teach/Emotional.png') }}" alt="情緒調節"></div>
+            <div class="panel"><div class="panel-head">定義</div><div class="panel-body">懂得用合適的方式表達情緒，不亂發脾氣。</div></div>
+            <div class="panel"><div class="panel-head">範例</div><div class="panel-body"><ul class="example-list"><li>生氣不拍桌、不打人，先深呼吸。</li><li>難過可以說出來，找老師或家人。</li><li>數到五、喝口水，再說話。</li></ul></div></div>
+          </div>
+        </div>
+
+        <div class="emo-box scene-manners">
+          <div class="card-ctrl"></div>
+          <div class="emo-body">
+            <div class="topic-chip"><span class="emoji">🙏</span><span class="title-zh">禮貌表達</span><span class="chip-sub">Manners</span></div>
+            <div class="scene-illustration"><img src="{{ url_for('static', filename='teach/polite.png') }}" alt="說謝謝"></div>
+            <div class="panel"><div class="panel-head">定義</div><div class="panel-body">表達感謝與遵守禮節，做有禮貌的好孩子。</div></div>
+            <div class="panel"><div class="panel-head">範例</div><div class="panel-body"><ul class="example-list"><li>別人幫忙，要說「謝謝」。</li><li>借來的東西，要記得還。</li><li>進教室先打招呼：早安、老師好。</li></ul></div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+<!-- 手機：漢堡選單控制（與首頁一致） -->
+<script>
+(function(){
+  const btn = document.getElementById('mobileMenuBtn');
+  const menu = document.getElementById('mobileMenu');
+  const backdrop = document.getElementById('mobileMenuBackdrop');
+  const logoutUrl = document.body.getAttribute('data-logout-url') || '/logout';
+  const openSettingsBtn = document.getElementById('openSettings');
+  const mobileOpenSettings = document.getElementById('mobileOpenSettings');
+  const mobileLogout = document.getElementById('mobileLogout');
+
+  const mq = window.matchMedia('(max-width: 768px)');
+  function syncBurger(){
+    const show = mq.matches;
+    if (btn) btn.style.display = show ? 'inline-flex' : 'none';
+    if(!show){
+      menu?.classList.remove('active');
+      backdrop?.classList.remove('active');
+      btn?.setAttribute('aria-expanded','false');
+      menu?.setAttribute('aria-hidden','true');
+    }
+  }
+  syncBurger();
+  mq.addEventListener('change', syncBurger);
+
+  function toggleMenu(force){
+    if(!menu || !btn || !backdrop) return;
+    const willOpen = (force === true) || (force !== false && !menu.classList.contains('active'));
+    menu.classList.toggle('active', willOpen);
+    backdrop.classList.toggle('active', willOpen);
+    btn.setAttribute('aria-expanded', String(willOpen));
+    menu.setAttribute('aria-hidden', String(!willOpen));
+  }
+  btn?.addEventListener('click', ()=>toggleMenu());
+  backdrop?.addEventListener('click', ()=>toggleMenu(false));
+
+  mobileOpenSettings?.addEventListener('click', ()=>{
+    toggleMenu(false);
+    openSettingsBtn?.click();
+  });
+  mobileLogout?.addEventListener('click', ()=>{
+    toggleMenu(false);
+    location.href = logoutUrl;
+  });
+  document.addEventListener('keydown', (e)=>{
+    if(e.key === 'Escape' && menu?.classList.contains('active')) toggleMenu(false);
+  });
+})();
+</script>
+
+<!-- Teach 分頁 -->
+<script>
+(function(){
+  const tabs = Array.from(document.querySelectorAll('.tabs .tab'));
+  const panels = {
+    manual:  document.getElementById('manual'),
+    emotion: document.getElementById('emotion'),
+    scene:   document.getElementById('scene')
+  };
+  function setActiveTab(name){
+    tabs.forEach(t=>{
+      const isActive = (t.dataset.tab === name);
+      t.classList.toggle('active', isActive);
+      t.setAttribute('aria-selected', String(isActive));
+    });
+    Object.entries(panels).forEach(([k,el])=>el.classList.toggle('active', k===name));
+    try{ localStorage.setItem('teach.activeTab', name); }catch(_){}
+    window.scrollTo({top:0, behavior:'instant'});
+    setTimeout(injectSpeakButtons, 0);
+  }
+  tabs.forEach(btn=>btn.addEventListener('click', ()=>setActiveTab(btn.dataset.tab)));
+  const saved = localStorage.getItem('teach.activeTab');
+  setActiveTab(['manual','emotion','scene'].includes(saved)? saved : 'manual');
+})();
+</script>
+
+<!-- Accordion 手機摺疊 -->
+<script>
+(function(){
+  const MQ = window.matchMedia('(max-width: 768px)');
+  function wireAccordions(){
+    document.querySelectorAll('.accordion').forEach(acc=>{
+      if (acc.dataset.wired === '1') return;
+      acc.addEventListener('click', (e)=>{
+        const btn = e.target.closest('.item-btn');
+        if (!btn) return;
+        const panel = btn.parentElement.querySelector('.item-panel');
+        const open = btn.getAttribute('aria-expanded') === 'true';
+        acc.querySelectorAll('.item-btn').forEach(b=>b!==btn && b.setAttribute('aria-expanded','false'));
+        acc.querySelectorAll('.item-panel').forEach(p=>p!==panel && (p.hidden = true));
+        btn.setAttribute('aria-expanded', String(!open));
+        panel.hidden = open;
+        setTimeout(injectSpeakButtons, 0);
+      });
+      acc.dataset.wired = '1';
+    });
+  }
+  function onModeChange(){ wireAccordions(); setTimeout(injectSpeakButtons, 0); }
+  MQ.addEventListener('change', onModeChange);
+  onModeChange();
+})();
+</script>
+
+<!-- 系統設定 Modal 控制（完整同步首頁） -->
+<script>
+(() => {
+  const $ = s => document.querySelector(s);
+  const openBtn  = $('#openSettings');
+  const modal    = $('#sysSettingsModal');
+  const closeBtn = $('#sysSettingsClose');
+
+  const inputH   = $('#timeHours');
+  const inputM   = $('#timeMinutes');
+  const btnStart = $('#timerStart');
+  const btnStop  = $('#timerStop');
+  const remainEl = $('#timeRemain');
+
+  const rate     = $('#ttsRate');
+  const rateLbl  = $('#ttsRateLabel');
+  const btnTest  = $('#ttsTest');
+  const enabled  = $('#ttsEnabled');
+  const logoutUrl = document.body.getAttribute('data-logout-url') || '/logout';
+
+  const openModal  = () => modal.setAttribute('aria-hidden','false');
+  const closeModal = () => modal.setAttribute('aria-hidden','true');
+  openBtn.addEventListener('click', openModal);
+  closeBtn.addEventListener('click', closeModal);
+  modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
+
+  const initRate = () => {
+    let saved = parseFloat(localStorage.getItem('tts.rate'));
+    if (Number.isNaN(saved)) saved = 1.0;
+    saved = Math.min(2, Math.max(0.5, saved));
+    rate.value = saved.toFixed(2);
+    rateLbl.textContent = saved.toFixed(2) + '×';
+    window.StarSpeech && (window.StarSpeech.rate = saved);
+    localStorage.setItem('tts.rate', saved.toFixed(2));
+  };
+  const initEnabled = () => {
+    const on = (localStorage.getItem('tts.enabled') ?? '1') !== '0';
+    enabled.checked = on;
+    window.StarSpeech && (window.StarSpeech.enabled = on);
+    localStorage.setItem('tts.enabled', on ? '1' : '0');
+  };
+  rate.addEventListener('input', () => {
+    let v = parseFloat(rate.value);
+    if (Number.isNaN(v)) v = 1.0;
+    v = Math.min(2, Math.max(0.5, v));
+    rate.value = v.toFixed(2);
+    rateLbl.textContent = v.toFixed(2) + '×';
+    window.StarSpeech && (window.StarSpeech.rate = v);
+    localStorage.setItem('tts.rate', v.toFixed(2));
+  });
+  enabled.addEventListener('change', () => {
+    const on = !!enabled.checked;
+    window.StarSpeech && (window.StarSpeech.enabled = on);
+    localStorage.setItem('tts.enabled', on ? '1' : '0');
+  });
+  btnTest.addEventListener('click', () => {
+    window.StarSpeech?.speak('這是速度測試。現在的語速是 ' + window.StarSpeech.rate.toFixed(2) + ' 倍。');
+  });
+  initRate(); initEnabled();
+
+  const fmt = (ms) => {
+    if (ms <= 0) return '00:00';
+    const s = Math.floor(ms/1000), m = Math.floor(s/60);
+    return String(m).padStart(2,'0') + ':' + String(s%60).padStart(2,'0');
+  };
+  const refreshRemain = () => {
+    const { active, left } = window.ParentTimer?.status() || {active:false,left:0};
+    remainEl.textContent = active ? fmt(left) : '未開始';
+    btnStart.disabled = active; btnStop.disabled  = !active;
+    if (active && left <= 0) window.location.href = logoutUrl;
+  };
+  btnStart.addEventListener('click', () => {
+    const h = Math.max(0, parseInt(inputH.value || '0', 10));
+    const m = Math.max(0, parseInt(inputM.value || '0', 10));
+    const ms = (h*60 + m) * 60 * 1000;
+    if (ms > 0) ParentTimer.start(ms);
+  });
+  btnStop.addEventListener('click',  () => ParentTimer.stop());
+  setInterval(refreshRemain, 500);
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'timer.active' || e.key === 'timer.endAt') refreshRemain();
+  });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshRemain(); });
+  refreshRemain();
+})();
+</script>
+<!-- 每卡朗讀 / 全部朗讀控制 -->
+<script>
+// === 全域朗讀控制物件 ===
+const SpeechCtrl = {
+  cancelAll(){
+    try{ speechSynthesis.cancel(); }catch(_){}
+    try{ window.StarSpeech?.cancelAll?.(); }catch(_){}
+  },
+  pauseAll(){
+    try{ speechSynthesis.pause(); }catch(_){}
+  },
+  resumeAll(){
+    try{ speechSynthesis.resume(); }catch(_){}
+  },
+  speak(text, onend){
+    // 若 StarSpeech 啟用則使用 StarSpeech
+    if (window.StarSpeech && window.StarSpeech.enabled !== false && typeof window.StarSpeech.speak === 'function'){
+      window.StarSpeech.speak(text, { onend });
+      return;
+    }
+    try{
+      this.cancelAll();
+      const u = new SpeechSynthesisUtterance(text);
+      u.rate = parseFloat(localStorage.getItem('tts.rate')) || 1.0;
+      u.onend = onend; u.onerror = onend;
+      speechSynthesis.speak(u);
+    }catch(_){ onend?.(); }
+  }
+};
+
+// === 卡片文字收集 ===
+function collectTextForCard(card){
+  const t = s => (s||"").trim();
+  if (card.classList.contains('emo-box')){
+    const title = t(card.querySelector('.title-zh')?.textContent);
+    const sub   = t(card.querySelector('.chip-sub')?.textContent).replace(/·/g,'，');
+    const chunks = [];
+    if (title) chunks.push(title);
+    if (sub)   chunks.push(sub);
+    const panels = card.querySelectorAll('.panel');
+    panels.forEach(p=>{
+      const head = t(p.querySelector('.panel-head')?.textContent);
+      const items = Array.from(p.querySelectorAll('li')).map(li=>t(li.textContent)).slice(0,3);
+      const body  = t(p.querySelector('.panel-body')?.childNodes?.[0]?.textContent || "");
+      if (/表情特徵/.test(head) && items.length) chunks.push('表情特徵：' + items.join('。'));
+      else if (/可能發生的時候/.test(head) && items.length) chunks.push('可能發生的時候：' + items.join('。'));
+      else if (/定義/.test(head) && body) chunks.push(body);
+      else if (/範例/.test(head) && items.length) chunks.push('範例：' + items.join('。'));
+    });
+    return chunks.join('。') + (chunks.length?'。':'');
+  }
+  if (card.classList.contains('video-card')){
+    const title = t(card.querySelector('.video-title')?.textContent);
+    return title ? title + '。' : '';
+  }
+  return '';
+}
+
+// === 為每張卡片注入朗讀鍵 ===
+let __speakTagSeq = 0;
+function ensureSpeakBtn(card){
+  if (card.closest('#manual')) return;
+
+  let bar = card.querySelector('.card-ctrl');
+  if (!bar){
+    bar = document.createElement('div');
+    bar.className = 'card-ctrl';
+    card.insertBefore(bar, card.firstChild);
+  }
+  if (!card.dataset.speakTag) card.dataset.speakTag = 'card-' + (++__speakTagSeq);
+
+  let speak = bar.querySelector('.speak-btn');
+  if (!speak){
+    speak = document.createElement('button');
+    speak.className = 'speak-btn';
+    speak.type = 'button';
+    speak.textContent = '🔊 朗讀';
+    bar.appendChild(speak);
+  }
+  let pause = bar.querySelector('.pause-btn');
+  if (!pause){
+    pause = document.createElement('button');
+    pause.className = 'pause-btn';
+    pause.type = 'button';
+    pause.dataset.state = 'idle';
+    pause.textContent = '⏸️ 暫停';
+    bar.appendChild(pause);
+  }
+
+  // 單卡朗讀邏輯
+  speak.onclick = () => {
+    const text = collectTextForCard(card);
+    if (!text) return;
+
+    // 停止其他卡的朗讀狀態
+    document.querySelectorAll('.speak-btn.is-speaking').forEach(b => b.classList.remove('is-speaking'));
+    SpeechCtrl.cancelAll();
+
+    speak.classList.add('is-speaking');
+    pause.dataset.state='playing';
+    pause.textContent='⏸️ 暫停';
+
+    const onDone = () => {
+      speak.classList.remove('is-speaking');
+      pause.dataset.state='idle';
+      pause.textContent='⏸️ 暫停';
+    };
+
+    SpeechCtrl.speak(text, onDone);
+  };
+
+  // 單卡暫停 / 繼續
+  pause.onclick = () => {
+    const st = pause.dataset.state;
+    if (st !== 'paused'){
+      pause.dataset.state='paused';
+      pause.textContent='▶️ 繼續';
+      SpeechCtrl.pauseAll();
+    } else {
+      pause.dataset.state='playing';
+      pause.textContent='⏸️ 暫停';
+      SpeechCtrl.resumeAll();
+    }
+  };
+}
+
+// === 自動注入所有卡片朗讀鍵 ===
+function injectSpeakButtons(){ document.querySelectorAll('.emo-box').forEach(ensureSpeakBtn); }
+
+// === 全部朗讀 ===
+function readAllIn(sectionId){
+  const sec = document.getElementById(sectionId);
+  if (!sec) return;
+  const cards = Array.from(sec.querySelectorAll('.emo-box'));
+  if (!cards.length) return;
+
+  SpeechCtrl.cancelAll();
+  let delay = 0;
+  cards.forEach(card=>{
+    const text = collectTextForCard(card);
+    if (!text) return;
+    if (window.StarSpeech?.enqueue){
+      window.StarSpeech.enqueue({ text, tag: card.dataset.speakTag, delay });
+    } else {
+      // 無 StarSpeech 時直接依序播放
+      setTimeout(()=> SpeechCtrl.speak(text), delay);
+    }
+    delay += 1000; // 每卡延遲 1 秒開始
+  });
+}
+
+// === 初始化 ===
+document.addEventListener('DOMContentLoaded', ()=>{
+  injectSpeakButtons();
+  window.addEventListener('resize', ()=>setTimeout(injectSpeakButtons,0));
+
+  // 切分頁、展開 Accordion 時停止朗讀
+  document.addEventListener('click', (e)=>{
+    if (e.target.closest('.item-btn') || e.target.closest('.tabs .tab')){
+      SpeechCtrl.cancelAll();
+      setTimeout(injectSpeakButtons,0);
+    }
+  });
+
+  // 全部朗讀按鈕
+  const btnAllEmotion = document.getElementById('readAllEmotion');
+  const btnAllScene   = document.getElementById('readAllScene');
+  btnAllEmotion?.addEventListener('click', ()=> readAllIn('emotion'));
+  btnAllScene?.addEventListener('click', ()=> readAllIn('scene'));
+
+  // 全部暫停 / 繼續
+  const btnPauseEmotion = document.getElementById('toggleAllEmotion');
+  const btnPauseScene   = document.getElementById('toggleAllScene');
+
+  function togglePause(btn){
+    const st = btn.dataset.state;
+    if (st === 'idle' || st === 'playing'){
+      SpeechCtrl.pauseAll();
+      btn.dataset.state='paused';
+      btn.textContent='▶️ 全部繼續';
+    } else {
+      SpeechCtrl.resumeAll();
+      btn.dataset.state='playing';
+      btn.textContent='⏸️ 全部暫停';
+    }
+  }
+  btnPauseEmotion?.addEventListener('click', ()=> togglePause(btnPauseEmotion));
+  btnPauseScene?.addEventListener('click', ()=> togglePause(btnPauseScene));
+});
+</script>
+</body>
+</html>

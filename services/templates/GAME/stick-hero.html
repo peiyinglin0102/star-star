@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Stick Hero (Vanilla JS)</title>
+  <style>
+    :root{ --back-top:16px; --back-left:16px; }
+    html, body { height: 100%; margin: 0; }
+    body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; cursor: pointer; }
+    .container { display: flex; justify-content: center; align-items: center; height: 100%; }
+    #score { position: absolute; top: 30px; right: 30px; font-size: 2em; font-weight: 900; }
+    #introduction { width: 200px; height: 150px; position: absolute; font-weight: 600; font-size: 0.8em; text-align: center; transition: opacity 2s; }
+    #restart { width: 120px; height: 120px; position: absolute; border-radius: 50%; color: white; background-color: red; border: none; font-weight: 700; font-size: 1.2em; display: none; cursor: pointer; }
+    #perfect { position: absolute; opacity: 0; transition: opacity 2s; }
+    #youtube, #youtube-card { display: none; }
+
+    /* 返回鈕 */
+    #back-button{
+      position: fixed;
+      top: calc(env(safe-area-inset-top, 0px) + var(--back-top));
+      left: calc(env(safe-area-inset-left, 0px) + var(--back-left));
+      z-index: 10000;
+      display:inline-flex;align-items:center;gap:8px;
+      font-size:16px;line-height:1;
+      color:#fff;
+      background: rgba(0,0,0,.55);
+      padding:10px 16px;border-radius:24px;text-decoration:none;font-weight:800;
+      box-shadow:0 4px 12px rgba(0,0,0,.35);
+      transition: background-color .2s, transform .06s ease-in-out;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    #back-button:hover{ background: rgba(0,0,0,.7); }
+    #back-button:active{ transform: scale(.98); }
+  </style>
+</head>
+<body data-logout-url="{{ url_for('auth.logout') }}">
+  <script src="{{ url_for('static', filename='js/parent_timer.js') }}?v=20251025-6"></script>
+  <a href="{{ url_for('auth.home') }}" id="back-button" aria-label="返回首頁">← 返回首頁</a>
+
+  <div class="container">
+    <div id="score"></div>
+    <canvas id="game" width="375" height="375"></canvas>
+    <div id="introduction">長按生成道路跨越吧！</div>
+    <div id="perfect">DOUBLE SCORE</div>
+    <button id="restart">RESTART</button>
+  </div>
+
+  <span>See how this game was made</span>
+  </a>
+  <div id="youtube-card">How to create a Stick Hero game with JavaScript and HTML Canvas</div>
+  <!-- 全站倒數提醒容器（60s / 30s / 5s 用） -->
+<div id="sysCenterWarn" class="sysset-center-warn" aria-hidden="true">
+  <div class="sysset-center-box" id="sysCenterWarnBox"></div>
+</div>
+  <script>
+    /* —— 返回邏輯 + 自動避位 —— */
+    (function(){
+      const backBtn = document.getElementById('back-button');
+      backBtn.addEventListener('click', function(e){
+        try{
+          const ref = document.referrer;
+          if(ref){
+            const r = new URL(ref);
+            if(r.origin === location.origin){
+              e.preventDefault();
+              history.back();
+              return;
+            }
+          }
+        }catch(_e){}
+      });
+      function avoidOverlap(){
+        document.documentElement.style.setProperty('--back-left','16px');
+        document.documentElement.style.setProperty('--back-top','16px');
+        const rect = backBtn.getBoundingClientRect();
+        let step=8, shifted=0, maxShift=240;
+        function covered(){
+          const pts=[[rect.left+4,rect.top+4],[rect.left+rect.width/2,rect.top+rect.height/2]];
+          return pts.some(([x,y])=>{
+            const el=document.elementFromPoint(x,y);
+            return el && el!==backBtn && !backBtn.contains(el) && el!==document.body && el!==document.documentElement;
+          });
+        }
+        while(covered() && shifted<=maxShift){
+          shifted+=step;
+          document.documentElement.style.setProperty('--back-left',(16+shifted)+'px');
+          const r2=backBtn.getBoundingClientRect();
+          rect.left=r2.left; rect.top=r2.top; rect.width=r2.width; rect.height=r2.height;
+        }
+      }
+      window.addEventListener('load', ()=> setTimeout(avoidOverlap, 0));
+      window.addEventListener('resize', ()=> setTimeout(avoidOverlap, 0));
+    })();
+
+    // ===== Utilities =====
+    Array.prototype.last = function () { return this[this.length - 1]; };
+    Math.sinus = function (degree) { return Math.sin((degree / 180) * Math.PI); };
+
+    // ===== Game state =====
+    let phase = "waiting"; // waiting | stretching | turning | walking | transitioning | falling
+    let lastTimestamp;
+    let heroX, heroY, sceneOffset;
+    let platforms = [];
+    let sticks = [];
+    let trees = [];
+    let score = 0;
+
+    // ===== Config =====
+    const canvasWidth = 375, canvasHeight = 375;
+    const platformHeight = 100;
+    const heroDistanceFromEdge = 10;
+    const paddingX = 100;
+    const perfectAreaSize = 10;
+
+    const backgroundSpeedMultiplier = 0.2;
+    const hill1BaseHeight = 100, hill1Amplitude = 10, hill1Stretch = 1;
+    const hill2BaseHeight = 70,  hill2Amplitude = 20, hill2Stretch = 0.5;
+
+    const stretchingSpeed = 4, turningSpeed = 4, walkingSpeed = 4, transitioningSpeed = 2, fallingSpeed = 2;
+    const heroWidth = 17, heroHeight = 30;
+
+    // ===== DOM / Canvas =====
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+    const introductionElement = document.getElementById("introduction");
+    const perfectElement = document.getElementById("perfect");
+    const restartButton = document.getElementById("restart");
+    const scoreElement = document.getElementById("score");
+
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    // ===== Init =====
+    resetGame();
+
+    // ===== Core =====
+    function resetGame() {
+      phase = "waiting";
+      lastTimestamp = undefined;
+      sceneOffset = 0;
+      score = 0;
+
+      introductionElement.style.opacity = 1;
+      perfectElement.style.opacity = 0;
+      restartButton.style.display = "none";
+      scoreElement.innerText = score;
+
+      platforms = [{ x: 50, w: 50 }];
+      generatePlatform(); generatePlatform(); generatePlatform(); generatePlatform();
+
+      sticks = [{ x: platforms[0].x + platforms[0].w, length: 0, rotation: 0 }];
+
+      trees = [];
+      for (let i = 0; i < 10; i++) generateTree();
+
+      heroX = platforms[0].x + platforms[0].w - heroDistanceFromEdge;
+      heroY = 0;
+
+      draw();
+    }
+
+    function generateTree() {
+      const minimumGap = 30, maximumGap = 150;
+      const lastTree = trees[trees.length - 1];
+      let furthestX = lastTree ? lastTree.x : 0;
+      const x = furthestX + minimumGap + Math.floor(Math.random() * (maximumGap - minimumGap));
+      const treeColors = ["#6D8821", "#8FAC34", "#98B333"];
+      const color = treeColors[Math.floor(Math.random() * treeColors.length)];
+      trees.push({ x, color });
+    }
+
+    function generatePlatform() {
+      const minimumGap = 40, maximumGap = 200, minimumWidth = 20, maximumWidth = 100;
+      const lastPlatform = platforms[platforms.length - 1];
+      let furthestX = lastPlatform.x + lastPlatform.w;
+      const x = furthestX + minimumGap + Math.floor(Math.random() * (maximumGap - minimumGap));
+      const w = minimumWidth + Math.floor(Math.random() * (maximumWidth - minimumWidth));
+      platforms.push({ x, w });
+    }
+
+    // ===== Input (Mouse + Touch) =====
+    const startStretch = () => {
+      if (phase === "waiting") {
+        lastTimestamp = undefined;
+        introductionElement.style.opacity = 0;
+        phase = "stretching";
+        window.requestAnimationFrame(animate);
+      }
+    };
+    const endStretch = () => {
+      if (phase === "stretching") phase = "turning";
+    };
+
+    window.addEventListener("mousedown", startStretch);
+    window.addEventListener("mouseup", endStretch);
+
+    window.addEventListener("touchstart", (e) => { e.preventDefault(); startStretch(); }, { passive: false });
+    window.addEventListener("touchend",   (e) => { e.preventDefault(); endStretch();   }, { passive: false });
+
+    window.addEventListener("keydown", (event) => {
+      if (event.key === " ") { event.preventDefault(); resetGame(); }
+    });
+
+    window.addEventListener("resize", () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      draw();
+    });
+
+    restartButton.addEventListener("click", (event) => {
+      event.preventDefault();
+      resetGame();
+      restartButton.style.display = "none";
+    });
+
+    window.requestAnimationFrame(animate);
+
+    // ===== Game loop =====
+    function animate(timestamp) {
+      if (!lastTimestamp) { lastTimestamp = timestamp; window.requestAnimationFrame(animate); return; }
+
+      switch (phase) {
+        case "waiting": return;
+        case "stretching": {
+          sticks.last().length += (timestamp - lastTimestamp) / stretchingSpeed;
+          break;
+        }
+        case "turning": {
+          sticks.last().rotation += (timestamp - lastTimestamp) / turningSpeed;
+          if (sticks.last().rotation > 90) {
+            sticks.last().rotation = 90;
+            const [nextPlatform, perfectHit] = thePlatformTheStickHits();
+            if (nextPlatform) {
+              score += perfectHit ? 2 : 1;
+              scoreElement.innerText = score;
+              if (perfectHit) {
+                perfectElement.style.opacity = 1;
+                setTimeout(() => (perfectElement.style.opacity = 0), 1000);
+              }
+              generatePlatform();
+              generateTree(); generateTree();
+            }
+            phase = "walking";
+          }
+          break;
+        }
+        case "walking": {
+          heroX += (timestamp - lastTimestamp) / walkingSpeed;
+          const [nextPlatform] = thePlatformTheStickHits();
+          if (nextPlatform) {
+            const maxHeroX = nextPlatform.x + nextPlatform.w - heroDistanceFromEdge;
+            if (heroX > maxHeroX) { heroX = maxHeroX; phase = "transitioning"; }
+          } else {
+            const maxHeroX = sticks.last().x + sticks.last().length + heroWidth;
+            if (heroX > maxHeroX) { heroX = maxHeroX; phase = "falling"; }
+          }
+          break;
+        }
+        case "transitioning": {
+          sceneOffset += (timestamp - lastTimestamp) / transitioningSpeed;
+          const [nextPlatform] = thePlatformTheStickHits();
+          if (sceneOffset > nextPlatform.x + nextPlatform.w - paddingX) {
+            sticks.push({ x: nextPlatform.x + nextPlatform.w, length: 0, rotation: 0 });
+            phase = "waiting";
+          }
+          break;
+        }
+        case "falling": {
+          if (sticks.last().rotation < 180) sticks.last().rotation += (timestamp - lastTimestamp) / turningSpeed;
+          heroY += (timestamp - lastTimestamp) / fallingSpeed;
+          const maxHeroY = platformHeight + 100 + (window.innerHeight - canvasHeight) / 2;
+          if (heroY > maxHeroY) { restartButton.style.display = "block"; return; }
+          break;
+        }
+        default: throw Error("Wrong phase");
+      }
+
+      draw();
+      window.requestAnimationFrame(animate);
+      lastTimestamp = timestamp;
+    }
+
+    function thePlatformTheStickHits() {
+      if (sticks.last().rotation != 90) throw Error(`Stick is ${sticks.last().rotation}°`);
+      const stickFarX = sticks.last().x + sticks.last().length;
+      const platformTheStickHits = platforms.find(
+        (p) => p.x < stickFarX && stickFarX < p.x + p.w
+      );
+      if (
+        platformTheStickHits &&
+        platformTheStickHits.x + platformTheStickHits.w / 2 - perfectAreaSize / 2 < stickFarX &&
+        stickFarX < platformTheStickHits.x + platformTheStickHits.w / 2 + perfectAreaSize / 2
+      ) return [platformTheStickHits, true];
+      return [platformTheStickHits, false];
+    }
+
+    function draw() {
+      ctx.save();
+      ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+      drawBackground();
+      ctx.translate((window.innerWidth - canvasWidth) / 2 - sceneOffset, (window.innerHeight - canvasHeight) / 2);
+      drawPlatforms();
+      drawHero();
+      drawSticks();
+      ctx.restore();
+    }
+
+    function drawPlatforms() {
+      platforms.forEach(({ x, w }) => {
+        ctx.fillStyle = "black";
+        ctx.fillRect(x, canvasHeight - platformHeight, w, platformHeight + (window.innerHeight - canvasHeight) / 2);
+        if (sticks.last().x < x) {
+          ctx.fillStyle = "red";
+          ctx.fillRect(x + w / 2 - perfectAreaSize / 2, canvasHeight - platformHeight, perfectAreaSize, perfectAreaSize);
+        }
+      });
+    }
+
+    function drawHero() {
+      ctx.save();
+      ctx.fillStyle = "black";
+      ctx.translate(heroX - heroWidth / 2, heroY + canvasHeight - platformHeight - heroHeight / 2);
+      drawRoundedRect(-heroWidth / 2, -heroHeight / 2, heroWidth, heroHeight - 4, 5);
+      const legDistance = 5;
+      ctx.beginPath(); ctx.arc(legDistance, 11.5, 3, 0, Math.PI * 2, false); ctx.fill();
+      ctx.beginPath(); ctx.arc(-legDistance, 11.5, 3, 0, Math.PI * 2, false); ctx.fill();
+      ctx.beginPath(); ctx.fillStyle = "white"; ctx.arc(5, -7, 3, 0, Math.PI * 2, false); ctx.fill();
+      ctx.fillStyle = "red"; ctx.fillRect(-heroWidth / 2 - 1, -12, heroWidth + 2, 4.5);
+      ctx.beginPath(); ctx.moveTo(-9, -14.5); ctx.lineTo(-17, -18.5); ctx.lineTo(-14, -8.5); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(-10, -10.5); ctx.lineTo(-15, -3.5); ctx.lineTo(-5, -7); ctx.fill();
+      ctx.restore();
+    }
+
+    function drawRoundedRect(x, y, width, height, radius) {
+      ctx.beginPath();
+      ctx.moveTo(x, y + radius);
+      ctx.lineTo(x, y + height - radius);
+      ctx.arcTo(x, y + height, x + radius, y + height, radius);
+      ctx.lineTo(x + width - radius, y + height);
+      ctx.arcTo(x + width, y + height, x + width, y + height - radius, radius);
+      ctx.lineTo(x + width, y + radius);
+      ctx.arcTo(x + width, y, x + width - radius, y, radius);
+      ctx.lineTo(x + radius, y);
+      ctx.arcTo(x, y, x, y + radius, radius);
+      ctx.fill();
+    }
+
+    function drawSticks() {
+      sticks.forEach((stick) => {
+        ctx.save();
+        ctx.translate(stick.x, canvasHeight - platformHeight);
+        ctx.rotate((Math.PI / 180) * stick.rotation);
+        ctx.beginPath(); ctx.lineWidth = 2; ctx.moveTo(0, 0); ctx.lineTo(0, -stick.length); ctx.stroke();
+        ctx.restore();
+      });
+    }
+
+    function drawBackground() {
+      const gradient = ctx.createLinearGradient(0, 0, 0, window.innerHeight);
+      gradient.addColorStop(0, "#BBD691"); gradient.addColorStop(1, "#FEF1E1");
+      ctx.fillStyle = gradient; ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
+      drawHill(hill1BaseHeight, hill1Amplitude, hill1Stretch, "#95C629");
+      drawHill(hill2BaseHeight, hill2Amplitude, hill2Stretch, "#659F1C");
+      trees.forEach((tree) => drawTree(tree.x, tree.color));
+    }
+
+    function drawHill(baseHeight, amplitude, stretch, color) {
+      ctx.beginPath();
+      ctx.moveTo(0, window.innerHeight);
+      ctx.lineTo(0, getHillY(0, baseHeight, amplitude, stretch));
+      for (let i = 0; i < window.innerWidth; i++) ctx.lineTo(i, getHillY(i, baseHeight, amplitude, stretch));
+      ctx.lineTo(window.innerWidth, window.innerHeight);
+      ctx.fillStyle = color; ctx.fill();
+    }
+
+    function drawTree(x, color) {
+      ctx.save();
+      ctx.translate((-sceneOffset * 0.2 + x) * hill1Stretch, getTreeY(x, hill1BaseHeight, hill1Amplitude));
+      const treeTrunkHeight = 5, treeTrunkWidth = 2, treeCrownHeight = 25, treeCrownWidth = 10;
+      ctx.fillStyle = "#7D833C";
+      ctx.fillRect(-treeTrunkWidth / 2, -treeTrunkHeight, treeTrunkWidth, treeTrunkHeight);
+      ctx.beginPath();
+      ctx.moveTo(-treeCrownWidth / 2, -treeTrunkHeight);
+      ctx.lineTo(0, -(treeTrunkHeight + treeCrownHeight));
+      ctx.lineTo(treeCrownWidth / 2, -treeTrunkHeight);
+      ctx.fillStyle = color; ctx.fill();
+      ctx.restore();
+    }
+
+    function getHillY(windowX, baseHeight, amplitude, stretch) {
+      const sineBaseY = window.innerHeight - baseHeight;
+      return Math.sinus((sceneOffset * 0.2 + windowX) * stretch) * amplitude + sineBaseY;
+    }
+
+    function getTreeY(x, baseHeight, amplitude) {
+      const sineBaseY = window.innerHeight - baseHeight;
+      return Math.sinus(x) * amplitude + sineBaseY;
+    }
+  </script>
+</body>
+</html>

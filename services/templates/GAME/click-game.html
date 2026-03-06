@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>快點星球</title>
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@600&display=swap" rel="stylesheet">
+  <style>
+    :root { --back-top:16px; --back-left:16px; }
+
+
+    body {     
+      font-family: 'Quicksand', sans-serif;
+      background: radial-gradient(circle at center, #ffe0b2 0%, #ffe0b2 30%, #e0f7fa 100%);
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+
+   #back-button {
+  position: fixed;
+  top: 20px;
+  left: 20px;           /* ← 保證貼左邊 */
+  transform: none !important;
+  margin: 0 !important;
+  align-self: flex-start !important; /* ← 關鍵，防止 flex 置中 */
+  z-index: 10000;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  line-height: 1;
+  color: #ef5350;
+  background: rgba(255,255,255,.9);
+  padding: 10px 16px;
+  border-radius: 24px;
+  text-decoration: none;
+  font-weight: 800;
+  box-shadow: 0 4px 12px rgba(0,0,0,.18);
+  transition: background-color .2s, transform .06s ease-in-out;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+    #back-button:hover{ background: #fff; }
+    #back-button:active{ transform: scale(.98); }
+
+    h1 {
+      font-size: 38px;
+      background: linear-gradient(90deg, #ff8a65, #f06292);
+      background-clip: text;
+      -webkit-background-clip: text;
+      color: transparent;
+      margin-bottom: 5px;
+      animation: fadeIn 1s ease-in-out;
+    }
+
+    .badge-container {
+      display: flex;
+      gap: 20px;
+      margin: 10px 0;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .badge {
+      display: inline-block;
+      background-color: #fff3e0;
+      color: #ff7043;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-weight: bold;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      font-size: 16px;
+    }
+
+    .game-container {
+      width: 95%;
+      max-width: 600px;
+      height: auto;
+      background: rgba(255, 255, 255, 0.8);
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+      margin-top: 10px;
+      position: relative;
+      backdrop-filter: blur(10px);
+      padding: 25px;
+    }
+
+    .start-screen {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+    }
+
+    .game-over {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 400px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      background-color: rgba(255, 255, 255, 0.85);
+      z-index: 10;
+    }
+
+    .start-screen h2, .game-over h2 {
+      color: #ef5350;
+      font-size: 22px;
+      margin-bottom: 5px;
+    }
+
+    .instructions {
+      font-size: 16px;
+      color: #444;
+      line-height: 1;
+      margin-bottom: 12px;
+      max-width: 95%;
+    }
+
+    .fruit-list {
+      list-style: none;
+      padding: 0;
+      margin: 5px 0;
+      text-align: left;
+    }
+
+    .fruit-list li {
+      margin: 4px 0;
+      font-size: 16px;
+    }
+
+    .game-area {
+      width: 100%;
+      height: 400px;
+      position: relative;
+      display: none;
+    }
+
+    .target {
+      position: absolute;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      transition: transform 0.1s;
+    }
+
+    
+    .target:hover {
+      transform: scale(1.1);
+    }
+
+    .button {
+      padding: 12px 28px;
+      font-size: 18px;
+      border: none;
+      border-radius: 50px;
+      background: linear-gradient(to right, #66bb6a, #43a047);
+      color: white;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      transition: background-color 0.3s, transform 0.2s;
+    }
+
+    .button:hover {
+      transform: scale(1.05);
+    }
+
+    .controls {
+      margin-top: 20px;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+  </style>
+</head>
+<body data-logout-url="{{ url_for('auth.logout') }}">
+  <script src="{{ url_for('static', filename='js/parent_timer.js') }}?v=20251025-6"></script>
+ <a href="{{ url_for('auth.home') }}" id="back-button" aria-label="返回首頁">← 返回首頁</a>
+  <h1>快點星球</h1>
+
+  <div class="badge-container">
+    <div class="badge">時間：<span id="timer">30</span> 秒</div>
+    <div class="badge">分數：<span id="score">0</span></div>
+  </div>
+
+  <div class="game-container">
+    <div class="start-screen" id="startScreen">
+      <h2>～歡迎來到快點星球～</h2>
+      <p class="instructions">
+        在限時 30 秒內，看看你能點到多少水果吧！<br><br>
+        每種水果有不同分數，還會顯示英文單字喔：
+      </p>
+      <ul class="fruit-list">
+        <li>🍍 Pineapple：1 分</li>
+        <li>🍊 Orange：2 分</li>
+        <li>🍉 Watermelon：3 分</li>
+        <li>🍋 Lemon：4 分</li>
+        <li>🍓 Strawberry：5 分</li>
+      </ul>
+      <p class="instructions">準備好了就按下開始，快點水果 GO！</p>
+      <button class="button" id="startButton">Start Game!</button>
+    </div>
+
+    <div class="game-area" id="gameArea"></div>
+
+    <div class="game-over" id="gameOver">
+      <h2>🎊 遊戲結束！</h2>
+      <div class="badge">最終分數：<span id="finalScore">0</span></div>
+      <div class="controls">
+        <button class="button" id="restartButton">🔁 再玩一次</button>
+      </div>
+    </div>
+  </div>
+<!-- 全站倒數提醒容器（60s / 30s / 5s 用） -->
+<div id="sysCenterWarn" class="sysset-center-warn" aria-hidden="true">
+  <div class="sysset-center-box" id="sysCenterWarnBox"></div>
+</div>
+
+  <script>
+    // 1) 指向「登入後首頁」的真正端點
+  const HOME_URL = "{{ url_for('auth.home') }}"; // ← 如果這個端點其實是靜態頁，請換成真正的登入後首頁端點
+
+  // 2) 安全返回（結束計時、清掉語音 & 場景，再導到首頁）
+  function goHomeSafely(replace=false) {
+    try {
+      isGameRunning = false;
+      clearInterval(gameInterval);
+      clearInterval(timerInterval);
+      if ('speechSynthesis' in window) speechSynthesis.cancel();
+      document.querySelectorAll('.target,.laser-beam,.enemy,.bullet').forEach(el => el.remove());
+    } catch(_) {}
+    // 避免回來又跳回去 → 用 replace()；若想保留歷史則用 assign()
+    replace ? location.replace(HOME_URL) : location.assign(HOME_URL);
+  }
+
+  // 3) 綁定「返回首頁」按鈕（唯一監聽）
+  (function bindBackButton() {
+    const btn = document.getElementById('back-button');
+    if (!btn) return;
+
+    // 讓 <a> 的 href 本身就是登入後首頁
+    btn.setAttribute('href', HOME_URL);
+
+    btn.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopImmediatePropagation(); // 關鍵：阻止其他舊監聽器搶走控制權
+
+      if (isGameRunning) {
+        // 遊戲中：一定送回登入後首頁（用 replace 不留「回到遊戲」歷史）
+        goHomeSafely(true);
+      } else {
+        // 未開局：同源上一頁就 back；否則回首頁
+        try {
+          const ref = document.referrer;
+          if (ref) {
+            const r = new URL(ref);
+            if (r.origin === location.origin) {
+              history.back();
+              return;
+            }
+          }
+        } catch(_) {}
+        location.assign(HOME_URL);
+      }
+    }, { once: false });
+  })();
+
+  // 4) 瀏覽器上一頁：若在遊戲中，一律回登入後首頁（避免回到遊戲頁）
+  window.addEventListener('popstate', function () {
+    if (isGameRunning) {
+      goHomeSafely(true);
+    }
+  });
+
+  // 5) 第一次開始遊戲時 push 一筆 state，讓「第一次上一頁」會觸發 popstate
+  (function wrapStartGameOnce() {
+    if (window.__wrappedStartGame) return;
+    window.__wrappedStartGame = true;
+
+    const __origStartGame = startGame; // 你的原本 startGame（函式宣告可被提升，這裡可抓到）
+    window.startGame = function () {
+      // 只 push 一次
+      if (!window.__pushedGameState) {
+        try {
+          history.pushState({ fromGame: true }, '', location.href);
+          window.__pushedGameState = true;
+        } catch(_) {}
+      }
+      return __origStartGame.apply(this, arguments);
+    };
+  })();
+
+    let score = 0;
+    let timeLeft = 30;
+    let gameInterval;
+    let timerInterval;
+    let isGameRunning = false;
+
+    const startScreen = document.getElementById('startScreen');
+    const gameArea = document.getElementById('gameArea');
+    const gameOver = document.getElementById('gameOver');
+    const scoreElement = document.getElementById('score');
+    const finalScoreElement = document.getElementById('finalScore');
+    const timerElement = document.getElementById('timer');
+    const startButton = document.getElementById('startButton');
+    const restartButton = document.getElementById('restartButton');
+
+    const targetFruits = [
+  { img: "{{ url_for('static', filename='game/OPQCJE1-02.png') }}", word: 'Pineapple', points: 1 },
+  { img: "{{ url_for('static', filename='game/OPQCJE1-03.png') }}", word: 'Orange', points: 2 },
+  { img: "{{ url_for('static', filename='game/OPQCJE1-04.png') }}", word: 'Watermelon', points: 3 },
+  { img: "{{ url_for('static', filename='game/OPQCJE1-05.png') }}", word: 'Lemon', points: 4 },
+  { img: "{{ url_for('static', filename='game/OPQCJE1-06.png') }}", word: 'Strawberry', points: 5 }
+];
+
+
+    function startGame() {
+      score = 0;
+      timeLeft = 30;
+      isGameRunning = true;
+
+      scoreElement.textContent = score;
+      timerElement.textContent = timeLeft;
+      startScreen.style.display = 'none';
+      gameArea.style.display = 'block';
+      gameOver.style.display = 'none';
+      gameArea.innerHTML = '';
+
+      gameInterval = setInterval(createTarget, 1000);
+      timerInterval = setInterval(updateTimer, 1000);
+    }
+
+    function createTarget() {
+      if (!isGameRunning) return;
+
+      const target = document.createElement('div');
+      target.className = 'target';
+
+      const maxX = gameArea.clientWidth - 100;
+      const maxY = gameArea.clientHeight - 100;
+      const randomX = Math.floor(Math.random() * maxX);
+      const randomY = Math.floor(Math.random() * maxY);
+      const size = Math.floor(Math.random() * 61) + 60;
+      const targetType = targetFruits[Math.floor(Math.random() * targetFruits.length)];
+      const points = targetType.points;
+
+      target.style.left = `${randomX}px`;
+      target.style.top = `${randomY}px`;
+      target.style.width = `${size}px`;
+      target.style.height = `${size}px`;
+
+      const img = document.createElement('img');
+      img.src = targetType.img;
+      img.alt = targetType.word;
+      img.style.width = '100%';
+      img.style.height = '100%';
+      img.style.borderRadius = '50%';
+      img.style.pointerEvents = 'none';
+      target.appendChild(img);
+
+      target.addEventListener('click', () => {
+        score += points;
+        scoreElement.textContent = score;
+        gameArea.removeChild(target);
+
+        const utter = new SpeechSynthesisUtterance(targetType.word);
+        utter.lang = 'en-US';
+        speechSynthesis.speak(utter);
+
+        const scoreEffect = document.createElement('div');
+        scoreEffect.textContent = `+${points}`;
+        scoreEffect.style.cssText = `position:absolute;left:${randomX + size / 2}px;top:${randomY}px;color:#2196f3;font-weight:bold;font-size:18px;pointer-events:none;transition:all 0.5s;opacity:1`;
+        gameArea.appendChild(scoreEffect);
+
+        const wordEffect = document.createElement('div');
+        wordEffect.textContent = targetType.word;
+        wordEffect.style.cssText = `position:absolute;left:${randomX + size / 2}px;top:${randomY + 20}px;color:#ff9800;font-weight:bold;font-size:16px;pointer-events:none;transition:all 0.5s;opacity:1`;
+        gameArea.appendChild(wordEffect);
+
+        setTimeout(() => {
+          scoreEffect.style.opacity = '0';
+          scoreEffect.style.transform = 'translateY(-20px)';
+          wordEffect.style.opacity = '0';
+          wordEffect.style.transform = 'translateY(-20px)';
+        }, 10);
+
+        setTimeout(() => {
+          if (gameArea.contains(scoreEffect)) gameArea.removeChild(scoreEffect);
+          if (gameArea.contains(wordEffect)) gameArea.removeChild(wordEffect);
+        }, 600);
+      });
+
+      gameArea.appendChild(target);
+
+      setTimeout(() => {
+        if (isGameRunning && gameArea.contains(target)) {
+          gameArea.removeChild(target);
+        }
+      }, 2000);
+    }
+
+    function updateTimer() {
+      timeLeft--;
+      timerElement.textContent = timeLeft;
+      if (timeLeft <= 0) endGame();
+    }
+
+    function endGame() {
+      isGameRunning = false;
+      clearInterval(gameInterval);
+      clearInterval(timerInterval);
+      finalScoreElement.textContent = score;
+      gameOver.style.display = 'flex';
+    }
+
+    function resetGame() {
+      gameOver.style.display = 'none';
+      startScreen.style.display = 'flex';
+    }
+
+    startButton.addEventListener('click', startGame);
+    restartButton.addEventListener('click', startGame);
+    resetGame();
+  </script>
+</body>
+</html>

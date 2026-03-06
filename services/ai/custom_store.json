@@ -1,0 +1,115 @@
+{
+  "next_set_id": 6,
+  "next_c_id": 52,
+  "next_cs_id": 9,
+  "users": {
+    "1": {
+      "sets": {
+        "4": {
+          "set_id": 4,
+          "set_title": "今天0928",
+          "set_count": 1
+        },
+        "5": {
+          "set_id": 5,
+          "set_title": "我的題組 20251004-173356",
+          "set_count": 0
+        }
+      },
+      "questions": {
+        "4": [
+          {
+            "c_id": 45,
+            "c_text": "以下哪一個最符合畫面中的人的情緒？",
+            "c_answer": "憤怒",
+            "c_media_url": "/ai/custom/uploads/101735649_8_1759000466794.jpg"
+          },
+          {
+            "c_id": 46,
+            "c_text": "影像中的人物此刻的情緒應該是什麼？",
+            "c_answer": "悲傷",
+            "c_media_url": "/ai/custom/uploads/1526916_1759000466842.jpg"
+          },
+          {
+            "c_id": 47,
+            "c_text": "（這張圖片的人看起來是什麼情緒？）",
+            "c_answer": "恐懼",
+            "c_media_url": "/ai/custom/uploads/1479698026_cc_iStock_78822855_LARGE-2_16x9_1759000466882.jpg"
+          },
+          {
+            "c_id": 48,
+            "c_text": "畫面裡的這個人是什麼情緒？",
+            "c_answer": "悲傷",
+            "c_media_url": "/ai/custom/uploads/cbb9343ef431d8a49f98a0ce9df04f68_t_1759000466903.jpeg"
+          },
+          {
+            "c_id": 49,
+            "c_text": "圖中這位是什麼情緒？",
+            "c_answer": "快樂",
+            "c_media_url": "/ai/custom/uploads/images_1_1759000466935.jpeg"
+          },
+          {
+            "c_id": 50,
+            "c_text": "請判斷照片中的這個人的情緒為何。",
+            "c_answer": "驚訝",
+            "c_media_url": "/ai/custom/uploads/images_2_1759000466968.jpeg"
+          }
+        ],
+        "5": [
+          {
+            "c_id": 51,
+            "c_text": "影像中的人物在這張圖片中屬於哪種情緒？",
+            "c_answer": "悲傷",
+            "c_media_url": "/ai/custom/uploads/cbb9343ef431d8a49f98a0ce9df04f68_t_1759570433152.jpeg"
+          }
+        ]
+      },
+      "sessions": {
+        "8": {
+          "cs_id": 8,
+          "set_id": 4,
+          "start": "2025-09-28 03:15:09",
+          "end": "2025-09-28 03:15:25"
+        }
+      },
+      "records": [
+        {
+          "cs_id": 8,
+          "c_id": 45,
+          "cr_user_answer": "憤怒",
+          "cr_is_correct": 1
+        },
+        {
+          "cs_id": 8,
+          "c_id": 46,
+          "cr_user_answer": "悲傷",
+          "cr_is_correct": 1
+        },
+        {
+          "cs_id": 8,
+          "c_id": 47,
+          "cr_user_answer": "驚訝",
+          "cr_is_correct": 0
+        },
+        {
+          "cs_id": 8,
+          "c_id": 48,
+          "cr_user_answer": "悲傷",
+          "cr_is_correct": 1
+        },
+        {
+          "cs_id": 8,
+          "c_id": 49,
+          "cr_user_answer": "快樂",
+          "cr_is_correct": 1
+        },
+        {
+          "cs_id": 8,
+          "c_id": 50,
+          "cr_user_answer": "驚訝",
+          "cr_is_correct": 1
+        }
+      ]
+    }
+  }
+}

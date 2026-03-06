@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>動畫題庫管理</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- CropperJS -->
+  <link rel="stylesheet" href="https://unpkg.com/cropperjs@1.6.2/dist/cropper.min.css">
+  <script src="https://unpkg.com/cropperjs@1.6.2/dist/cropper.min.js"></script>
+
+  <style>
+    * { box-sizing: border-box; }
+
+    /* 與 Picture-question.html 相同的色票 */
+    :root{
+      --sb-bg:#1f2937; --sb-bg-hover:#374151; --sb-text:#e5e7eb; --sb-muted:#9ca3af;
+      --bg:#f2f2f2; --card:#ffffff; --muted:#8b8b8b; --line:#e8e8e8; --primary:#3b82f6;
+      --shadow:0 6px 18px rgba(0,0,0,.06); --radius:14px;
+    }
+
+    body { margin:0; font-family:"Arial","微軟正黑體",sans-serif; background:var(--bg); color:#111; }
+
+    /* ====== 側欄（完整沿用 Picture-question.html） ====== */
+    .sidebar {
+      width:260px; background:var(--sb-bg); color:var(--sb-text);
+      height:100vh; padding:24px 16px;
+      position:fixed; display:flex; flex-direction:column;
+      box-shadow:0 0 0 1px rgba(255,255,255,.04) inset, var(--shadow);
+      z-index:10000;
+    }
+    .sidebar-scroll{
+      overflow-y:auto; overflow-x:hidden; padding-right:4px;
+      padding-bottom:16px; flex:1;
+    }
+    .admin-label{
+      text-align:center; font-weight:800; font-size:16px; letter-spacing:.5px; color:var(--sb-text);
+      margin:12px 2px 18px;
+    }
+    .section{ margin:10px 0 14px; padding-top:6px; border-top:1px solid rgba(255,255,255,.06); }
+    .section:first-of-type{ border-top:none; margin-top:4px; }
+    .section-label{
+      text-align:left; color:var(--sb-muted);
+      font-weight:700; font-size:13px; letter-spacing:.6px;
+      padding:6px 6px; margin-bottom:6px; user-select:none;
+    }
+    .submenu{ display:flex; flex-direction:column; gap:8px; }
+    .submenu-link, .submenu-item{
+      display:flex; align-items:center; gap:10px;
+      text-decoration:none; text-align:left;
+      padding:10px 12px; font-size:13px; border-radius:10px;
+      color:var(--sb-text); background:transparent;
+      border:1px solid rgba(255,255,255,.12); transition:.15s;
+    }
+    .submenu-link:hover{ background:var(--sb-bg-hover); border-color:rgba(255,255,255,.18); }
+    .submenu-item{ opacity:.6; cursor:not-allowed; }
+    .submenu-link.is-active{
+      position:relative; background:#257beb; border-color:#257beb; color:#fff;
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.12);
+    }
+    .submenu-link.is-active::before{
+      content:""; position:absolute; left:-12px; top:8px; bottom:8px; width:4px;
+      background:#3b82f6; border-radius:4px;
+    }
+    .submenu-link.is-active:hover{ background:#1d4ed8; border-color:#1d4ed8; }
+    .sidebar-footer{
+      margin-top:auto; padding-top:14px; padding-bottom:6px;
+      border-top:1px solid rgba(255,255,255,.06);
+    }
+    .logout-button{
+      width:100%; margin:12px 0 6px; padding:9px 10px; border-radius:9px; font-size:13px;
+      text-align:center; background:rgba(239,68,68,.10); color:#ef4444;
+      border:1px solid rgba(239,68,68,.35); cursor:pointer; transition:.15s;
+    }
+    .logout-button:hover{ background:rgba(239,68,68,.18); border-color:rgba(239,68,68,.5); }
+
+    /* 手機抽屜 + 遮罩（與 Picture-question.html 同步） */
+    .mobile-toggle{
+      position: fixed;
+      top: max(10px, env(safe-area-inset-top,10px));
+      left: 12px; z-index: 10001;
+      display:none;
+      background:#ffffff; color:#111;
+      border:1px solid var(--line); border-radius:12px;
+      padding:10px 14px; box-shadow:var(--shadow);
+      font-size:15px; line-height:1;
+    }
+    .sb-scrim{
+      position: fixed; inset: 0; background: rgba(0,0,0,.35);
+      opacity: 0; visibility: hidden; transition: opacity .2s ease; z-index: 9999;
+    }
+    .sb-scrim.is-show{ opacity:1; visibility:visible; }
+
+    /* ====== 主內容（桌機不變） ====== */
+    .main { margin-left:260px; padding:28px 32px 60px; }
+
+    /* ====== 既有內容樣式（保持你的桌機視覺） ====== */
+    h1 { text-align:center; font-size:28px; margin-bottom:14px; }
+    .toolbar { display:flex; gap:12px; align-items:center; justify-content:space-between; margin:10px 0 20px; }
+    .left-tools { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    .tool-btn { border:none; background:#e7e7e7; padding:8px 12px; border-radius:999px; cursor:pointer; font-size:14px; }
+    .tool-btn.active { background:#2196F3; color:#fff; }
+    .tool-label { font-size:14px; color:#444; }
+    .search-bar { display:flex; align-items:center; gap:8px; }
+    .search-bar input { border:none; padding:8px 18px; border-radius:30px; background:#d9d9d9; width:240px; font-size:16px; }
+
+    table { width:100%; border-collapse:collapse; background:#fff; }
+    th, td { text-align:center; padding:12px; font-size:15px; border-bottom:1px solid #ccc; }
+    th { background:#fafafa; }
+    .thumbnail { width:100px; height:60px; background:#d9d9d9; display:flex; align-items:center; justify-content:center; overflow:hidden; margin:0 auto; }
+    .thumbnail img, .thumb-video { width:100%; height:100%; object-fit:cover; display:block; }
+
+    .edit-btn, .delete-btn, .save-btn, .cancel-btn { cursor:pointer; margin:0 6px; user-select:none; }
+    .edit-row input[type="text"]{ width:95%; padding:6px 8px; }
+
+    .pager { margin-top:16px; display:flex; gap:10px; justify-content:center; align-items:center; }
+    .pager button { background:#ccc; border:none; border-radius:50%; width:30px; height:30px; cursor:pointer; }
+    .pager button.active { background:#888; color:#fff; }
+
+    .muted { color:#666; }
+
+    /* 操作欄位：一行排列＋不換行（保持） */
+    table td:nth-child(6) { white-space: nowrap; }
+    .edit-btn, .delete-btn, .crop-btn {
+      display:inline-flex; align-items:center; justify-content:center;
+      width:28px; height:28px; margin:0 6px; border-radius:6px;
+      cursor:pointer; user-select:none; line-height:1; vertical-align:middle;
+      transition:transform .08s ease, background-color .15s ease;
+    }
+    .edit-btn:hover, .delete-btn:hover, .crop-btn:hover {
+      transform: translateY(-1px);
+      background: rgba(0,0,0,.06);
+    }
+    .actions-cell { white-space: nowrap; }
+
+    /* ====== 行動版 RWD（與 Picture-question.html 同步） ====== */
+    @media (max-width: 768px){
+      .main {
+        margin-left:0;
+        padding: calc(60px + env(safe-area-inset-top,0px)) 16px 90px;
+      }
+              .sidebar{ display:flex; flex-direction:column; }
+
+  /* 可捲動區：多留底部空間，避免被黏底的 footer 蓋住 */
+  .sidebar-scroll{
+    overflow-y:auto; 
+    padding-right:4px;
+    padding-bottom: calc(70px + env(safe-area-inset-bottom, 0px)); /* ⬅ 重要 */
+    flex:1;
+  }
+      .sidebar{
+        transform: translateX(-105%);
+        transition: transform .25s ease;
+        width:82vw; max-width:340px;
+      }
+      .sidebar.is-open{ transform: translateX(0); }
+      .mobile-toggle{ display:inline-block; }
+
+      .toolbar{ flex-wrap: wrap; gap:10px; }
+      .search-bar input{ width:auto; min-width:0; flex:1; }
+
+      /* 表格可橫向滑動，不擠壞欄位 */
+      .table-wrap{
+        width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch;
+        border-radius:12px; box-shadow:var(--shadow);
+      }
+      table{ min-width: 720px; }
+      .thumbnail{ width:84px; height:50px; }
+      th, td{ padding:10px; font-size:14px; }
+    }
+
+    /* ====== 裁切 Modal（沿用你的設計） ====== */
+    .crop-modal[hidden]{ display:none; }
+    .crop-backdrop{ position:fixed; inset:0; background:rgba(0,0,0,.45); backdrop-filter:saturate(110%) blur(2px); }
+    .crop-panel{
+      position:fixed; inset:auto 0 0 0; margin:auto; top:6vh; width:min(92vw, 980px);
+      background:#fff; border:1px solid #e5e7eb; border-radius:12px; box-shadow:0 18px 50px rgba(0,0,0,.25);
+      display:flex; flex-direction:column; max-height:88vh; overflow:hidden;
+    }
+    .crop-head{ display:flex; align-items:center; padding:10px 14px; border-bottom:1px solid #e5e7eb; }
+    .crop-head .title{ font-weight:600; }
+    .crop-head .close-btn{ margin-left:auto; border:none; background:transparent; font-size:22px; cursor:pointer; }
+    .crop-toolbar{ display:flex; align-items:center; gap:10px; padding:10px 14px; border-bottom:1px solid #e5e7eb; background:#f9fafb; }
+    .crop-toolbar select{ padding:6px 10px; border-radius:8px; border:1px solid #e5e7eb; background:#fff; }
+    .crop-body{ position:relative; display:flex; align-items:center; justify-content:center; padding:10px; background:#111; min-height:360px; }
+    #cropImage{ max-width:100%; max-height:70vh; display:block; }
+    .crop-actions{ display:flex; align-items:center; gap:10px; padding:10px 14px; border-top:1px solid #e5e7eb; background:#f9fafb; }
+    .crop-actions .btn{ border:1px solid #e5e7eb; background:#fff; border-radius:8px; padding:8px 12px; cursor:pointer; }
+    .crop-actions .btn.is-primary{ background:#2563eb; color:#fff; border-color:#2563eb; }
+  </style>
+</head>
+<body>
+
+  <!-- 手機：漢堡鍵與遮罩（與 Picture 一致） -->
+  <div class="sb-scrim" hidden></div>
+  <button class="mobile-toggle" type="button" aria-label="開啟選單">☰ 選單</button>
+
+  <!-- 側邊欄（與 Picture-question.html 結構一致） -->
+  <div class="sidebar">
+    <div class="sidebar-scroll">
+      <div class="admin-label">管理員Admin</div>
+
+      <!-- 儀表板 -->
+      <div class="section">
+        <div class="section-label">儀表板 ▾</div>
+        <div class="submenu">
+          <a class="submenu-link" href="{{ url_for('admin.frontpage') }}" data-page="/ADMIN/frontpage.html">數據總覽</a>
+        </div>
+      </div>
+
+      <!-- 用戶資訊 -->
+      <div class="section">
+        <div class="section-label">用戶資訊 ▾</div>
+        <div class="submenu">
+          <a class="submenu-link" href="{{ url_for('admin.user_information') }}" data-page="/ADMIN/Userinformation.html">帳號管理</a>
+          <a class="submenu-link" href="{{ url_for('admin.page_answer_records') }}" data-page="/ADMIN/answer-records.html">答題紀錄</a>
+          <a class="submenu-link" href="{{ url_for('admin.add_user') }}" data-page="/ADMIN/add-user.html">自訂題目</a>
+        </div>
+      </div>
+
+      <!-- 題庫管理 -->
+      <div class="section">
+        <div class="section-label">題庫管理 ▾</div>
+        <div class="submenu">
+          <a class="submenu-link" href="{{ url_for('ai.page_question') }}" data-page="/ADMIN/Question.html">上傳題目</a>
+          <a class="submenu-link" href="{{ url_for('ai.page_picture_question') }}" data-page="/ADMIN/Picture-question.html">圖片題庫</a>
+          <a class="submenu-link is-active" href="{{ url_for('ai.page_gif_question') }}" data-page="/ADMIN/GIF-question.html">動圖題庫</a>
+          <a class="submenu-link" href="{{ url_for('ai.page_situation_question') }}" data-page="/ADMIN/Situation-question.html">情境題庫</a>
+        </div>
+      </div>
+
+      <!-- 登出 -->
+      <div class="sidebar-footer">
+        <button class="logout-button" onclick="location.href='{{ url_for('admin.logout') }}'">登出帳戶</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 主內容（桌機不變；手機加 table-wrap 方便橫向滑動） -->
+  <div class="main">
+    <h1>動畫題庫管理</h1>
+
+    <div class="toolbar">
+      <div class="left-tools">
+        <span class="tool-label">序號：</span>
+        <button id="serialAsc" class="tool-btn active">1→N</button>
+        <button id="serialDesc" class="tool-btn">N→1</button>
+      </div>
+      <div class="search-bar">🔍 <input id="keyword" type="text" placeholder="搜尋題幹/答案..."></div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>序號</th><th>題目縮圖</th><th>題目內容</th><th>正確答案</th><th>上傳/更新時間</th><th>編輯</th><th>操作人員</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <div class="pager" id="pager"></div>
+  </div>
+
+  <!-- 裁切彈窗（沿用你的實作） -->
+  <div id="cropModal" class="crop-modal" hidden>
+    <div class="crop-backdrop" data-close></div>
+    <div class="crop-panel">
+      <div class="crop-head">
+        <div class="title">裁切圖片</div>
+        <button class="close-btn" data-close>×</button>
+      </div>
+      <div class="crop-toolbar">
+        <label>比例：</label>
+        <select id="cropAspect">
+          <option value="16/9" selected>16 : 9</option>
+          <option value="4/3">4 : 3</option>
+          <option value="1">1 : 1</option>
+          <option value="free">自由</option>
+        </select>
+        <span style="width:12px"></span>
+        <label>輸出尺寸：</label>
+        <select id="cropSize">
+          <option value="1280x720" selected>1280 × 720</option>
+          <option value="1920x1080">1920 × 1080</option>
+          <option value="800x600">800 × 600</option>
+          <option value="orig">使用裁框原始像素</option>
+        </select>
+      </div>
+      <div class="crop-body"><img id="cropImage" alt="裁切目標"></div>
+      <div class="crop-actions">
+        <button id="cropRotateL" class="btn">↺</button>
+        <button id="cropRotateR" class="btn">↻</button>
+        <span style="flex:1"></span>
+        <button id="cropCancel" class="btn">取消</button>
+        <button id="cropSave" class="btn is-primary">儲存裁切</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ===== 手機側欄抽屜 + 路由高亮（與 Picture-question.html 同步） ===== */
+    (function(){
+      const sb = document.querySelector('.sidebar');
+      const mobileBtn = document.querySelector('.mobile-toggle');
+      const scrim = document.querySelector('.sb-scrim');
+      const mq = window.matchMedia('(max-width: 768px)');
+
+      const showToggle = ()=> { mobileBtn.style.display = mq.matches ? 'inline-block' : 'none'; };
+      const openSidebar = (open)=> {
+        if(open){
+          sb.classList.add('is-open');
+          if(scrim){ scrim.classList.add('is-show'); scrim.removeAttribute('hidden'); }
+        }else{
+          sb.classList.remove('is-open');
+          if(scrim){ scrim.classList.remove('is-show'); scrim.setAttribute('hidden',''); }
+        }
+      };
+
+      mq.addEventListener('change', ()=>{ showToggle(); if(!mq.matches){ openSidebar(false); }});
+      showToggle();
+
+      mobileBtn.addEventListener('click', (e)=>{ e.stopPropagation(); const willOpen = !sb.classList.contains('is-open'); openSidebar(willOpen); });
+      scrim?.addEventListener('click', ()=> openSidebar(false));
+      document.querySelector('.main')?.addEventListener('click', ()=> openSidebar(false));
+
+      // 自動高亮
+      const path = location.pathname;
+      document.querySelectorAll('.submenu-link').forEach(a=>{
+        const dp = a.getAttribute('data-page') || '';
+        const href = a.getAttribute('href') || '';
+        if( (dp && path.endsWith(dp)) || (href && href !== '#' && path === href) ){
+          a.classList.add('is-active');
+        }
+      });
+    })();
+
+    /* ===== 下方保留你原本的功能邏輯：不更動 ===== */
+
+    const API_BASE = '/ai';
+    const PAGE_SIZE = 20;
+    let rows = [], view = [], current = 1;
+    let serialDir = 'asc', keyword = '';
+
+    function toggleSubmenu(){} /* 舊函式已無用，但保留不呼叫，避免誤觸 */
+
+    function previewAvatar(e){} /* 舊頭像輸入移除，保留空殼避免外部呼叫報錯 */
+
+    function tsOf(v){ if(!v) return 0; const s=String(v).replace('T',' ').replace(/\//g,'-'); const t=Date.parse(s)||Date.parse(s.replace(/-/g,'/'))||0; return isNaN(t)?0:t; }
+    function isVideoUrl(url){
+      const ext=(url.split('.').pop()||'').toLowerCase();
+      return ['mp4','mov','webm','mkv','avi'].includes(ext);
+    }
+
+    function mediaThumb(url){
+      if (!url) return '<div class="thumbnail muted">無媒體</div>';
+      if (isVideoUrl(url)) {
+        return `
+          <div class="thumbnail">
+            <video class="thumb-video"
+                   data-src="${url}"
+                   muted
+                   loop
+                   playsinline
+                   preload="metadata"></video>
+          </div>`;
+      }
+      return `
+        <div class="thumbnail">
+          <img class="thumb-img" loading="lazy" decoding="async" src="${url}" alt="">
+        </div>`;
+    }
+
+    function initThumbs(){
+      const vids = document.querySelectorAll('.thumb-video');
+      const io = new IntersectionObserver(entries=>{
+        entries.forEach(entry=>{
+          const v = entry.target;
+          if (entry.isIntersecting){
+            if (!v.src){
+              v.src = v.dataset.src;
+              v.addEventListener('loadedmetadata', () => {
+                try {
+                  const t = Math.min(0.2, (v.duration || 1) - 0.05);
+                  v.currentTime = t;
+                } catch (_) {}
+                v.play().catch(()=>{});
+              }, { once:true });
+            }else{
+              v.play().catch(()=>{});
+            }
+          }else{
+            v.pause();
+          }
+        });
+      }, { threshold: .2 });
+      vids.forEach(v=>{ v.addEventListener('mouseleave', ()=> v.pause()); io.observe(v); });
+    }
+
+    async function loadData(){
+      const res = await fetch(`${API_BASE}/api/system/list?type=gif`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'load failed');
+      rows = Array.isArray(data) ? data : [];
+      applyFilterAndSort();render();
+    }
+
+    function applyFilterAndSort(){
+      const kw = (keyword || '').toLowerCase();
+      let filtered = !kw ? rows.slice() : rows.filter(r=>{
+        const hay = `${r.s_text||''} ${r.s_answer||''}`.toLowerCase();
+        return hay.includes(kw);
+      });
+      filtered.sort((a,b)=> tsOf(b.s_createdate) - tsOf(a.s_createdate));
+      view = (serialDir === 'asc') ? filtered : filtered.slice().reverse();
+    }
+
+    function setActiveButtons(){
+      document.getElementById('serialAsc').classList.toggle('active', serialDir==='asc');
+      document.getElementById('serialDesc').classList.toggle('active', serialDir==='desc');
+    }
+
+    function render(){
+      const tbody = document.getElementById('tbody');
+      tbody.innerHTML = '';
+      const start = (current-1)*PAGE_SIZE;
+      const items = view.slice(start, start + PAGE_SIZE);
+      const total = view.length;
+
+      items.forEach((r, idx)=>{
+        const serial = (serialDir === 'asc') ? (start + idx + 1) : (total - (start + idx));
+        const canCrop = r.s_media_url && !isVideoUrl(r.s_media_url); // 僅圖片可裁切
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${serial}</td>
+          <td>${mediaThumb(r.s_media_url)}</td>
+          <td class="text-cell">${escapeHtml(r.s_text || '')}</td>
+          <td class="ans-cell">${escapeHtml(r.s_answer || '')}</td>
+          <td>${fmtDate(r.s_createdate)}</td>
+          <td class="actions-cell">
+            <span class="edit-btn" title="編輯">✏️</span>
+            <span class="delete-btn" title="刪除">🗑️</span>
+            <span class="crop-btn" title="${canCrop?'裁切':'僅支援圖片裁切'}">✂️</span>
+          </td>
+          <td>${r.admin_id ?? ''}</td>
+        `;
+        bindRowEvents(tr, r, canCrop);
+        tbody.appendChild(tr);
+      });
+
+      renderPager(); setActiveButtons(); initThumbs();
+    }
+
+    function renderPager(){
+      const pager = document.getElementById('pager');
+      pager.innerHTML = '';
+      const pages = Math.max(1, Math.ceil(view.length / PAGE_SIZE));
+      const prev = document.createElement('button'); prev.textContent='◀'; prev.onclick=()=>{ if(current>1){current--;render();} }; pager.appendChild(prev);
+      for(let i=1;i<=pages;i++){ const b=document.createElement('button'); b.textContent=i; if(i===current)b.classList.add('active'); b.onclick=()=>{current=i;render();}; pager.appendChild(b); }
+      const next = document.createElement('button'); next.textContent='▶'; next.onclick=()=>{ if(current<pages){current++;render();} }; pager.appendChild(next);
+    }
+
+    function bindRowEvents(tr, r, canCrop){
+      const edit = tr.querySelector('.edit-btn');
+      const del  = tr.querySelector('.delete-btn');
+      const crop = tr.querySelector('.crop-btn');
+
+      if (crop){
+        crop.onclick = () => {
+          if (!canCrop) { alert('目前只支援「圖片」裁切，影片不支援。'); return; }
+          openCropper(r);
+        };
+      }
+
+      edit.onclick = () => {
+        if (tr.classList.contains('edit-row')) return;
+        tr.classList.add('edit-row');
+        const tCell = tr.querySelector('.text-cell');
+        const aCell = tr.querySelector('.ans-cell');
+        const tInit = r.s_text || '';
+        const aInit = r.s_answer || '';
+        tCell.innerHTML = `<input type="text" value="${escapeAttr(tInit)}">`;
+        aCell.innerHTML = `
+          <input type="text" value="${escapeAttr(aInit)}">
+          <div class="muted" style="margin-top:6px">或上傳新媒體（圖片 / 影片）更新連結：</div>
+          <input type="file" accept="image/*,video/*" class="file-up">
+        `;
+        const action = tr.querySelector('td:nth-child(6)');
+        const old = action.innerHTML;
+        action.innerHTML = `<span class="save-btn" title="儲存">💾</span><span class="cancel-btn" title="取消">✖</span>`;
+
+        action.querySelector('.cancel-btn').onclick = () => {
+          tr.classList.remove('edit-row');
+          tCell.textContent = tInit;
+          aCell.textContent = aInit;
+          action.innerHTML = old;
+          bindRowEvents(tr, r, canCrop);
+        };
+
+        action.querySelector('.save-btn').onclick = async () => {
+          const textVal = tCell.querySelector('input[type="text"]').value.trim();
+          const ansVal  = aCell.querySelector('input[type="text"]').value.trim();
+          const file    = aCell.querySelector('.file-up').files[0];
+          let media_url = null;
+          if (file){
+            const fd = new FormData(); fd.append('files[]', file, file.name);
+            const up = await fetch(`${API_BASE}/api/upload`, {method:'POST', body: fd});
+            const arr = await up.json();
+            if (!up.ok) { alert(arr.error || '上傳失敗'); return; }
+            media_url = (arr && arr[0] && arr[0].media_url) || null;
+          }
+          const payload = { s_id: r.s_id, s_text: textVal, s_answer: ansVal };
+          if (media_url) payload.s_media_url = media_url;
+          const res = await fetch(`${API_BASE}/api/system/update`, {
+            method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)
+          });
+          const data = await res.json();
+          if (!res.ok || !data.ok) { alert(data.error || '更新失敗'); return; }
+          await loadData();
+        };
+      };
+
+      del.onclick = async () => {
+        if (!confirm('確定刪除這題嗎？')) return;
+        const res = await fetch(`${API_BASE}/api/system/delete/${r.s_id}`, {method:'DELETE'});
+        const data = await res.json();
+        if (!res.ok || !data.ok) { alert(data.error || '刪除失敗'); return; }
+        await loadData();
+      };
+    }
+
+    document.getElementById('keyword').addEventListener('input', (e)=>{
+      keyword = (e.target.value || '').trim(); applyFilterAndSort(); current = 1; render();
+    });
+    document.getElementById('serialAsc').onclick = ()=>{ serialDir='asc'; applyFilterAndSort(); current=1; render(); };
+    document.getElementById('serialDesc').onclick = ()=>{ serialDir='desc'; applyFilterAndSort(); current=1; render(); };
+
+    function fmtDate(v){ if(!v) return ''; return String(v).replace('T',' ').slice(0,19); }
+    function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
+    function escapeAttr(s){ return escapeHtml(s); }
+
+    /* ====== 裁切邏輯（保留你的流程） ====== */
+    let CROP_ASPECT = 16/9, CROP_W = 1280, CROP_H = 720;
+    const cropModal    = document.getElementById('cropModal');
+    const cropImgEl    = document.getElementById('cropImage');
+    const cropAspectEl = document.getElementById('cropAspect');
+    const cropSizeEl   = document.getElementById('cropSize');
+    const cropSaveBtn  = document.getElementById('cropSave');
+    const cropCancelBtn= document.getElementById('cropCancel');
+    const cropRotateL  = document.getElementById('cropRotateL');
+    const cropRotateR  = document.getElementById('cropRotateR');
+
+    let cropper=null, cropRow=null;
+
+    function setAspectFromSelect(val){
+      if (!cropper) return;
+      cropper.setAspectRatio(val==='free' ? NaN : (+val.split('/')[0] / +val.split('/')[1]));
+    }
+
+    async function openCropper(row){
+      cropRow = row;
+      cropModal.hidden = false;
+      cropImgEl.src = 'data:image/svg+xml;utf8,' + encodeURIComponent(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="Arial" font-size="16">Loading...</text></svg>'
+      );
+      cropImgEl.src = row.s_media_url;
+      await new Promise(r=>{ cropImgEl.onload=r; cropImgEl.onerror=r; });
+
+      if (cropper){ try{ cropper.destroy(); }catch(_){ } }
+      cropper = new Cropper(cropImgEl, {
+        viewMode: 2,
+        aspectRatio: (()=>{ const v=cropAspectEl.value; return v==='free'?NaN:(+v.split('/')[0]/+v.split('/')[1]); })(),
+        autoCropArea: 0.9,
+        background: false,
+        movable: true, zoomable: true, rotatable: true, guides: true,
+      });
+
+      cropRotateL.onclick = ()=> cropper && cropper.rotate(-90);
+      cropRotateR.onclick = ()=> cropper && cropper.rotate( 90);
+      cropAspectEl.onchange = e => setAspectFromSelect(e.target.value);
+    }
+
+    function closeCropper(){
+      cropModal.hidden = true;
+      if (cropper){ try{ cropper.destroy(); }catch(_){ } cropper=null; }
+      cropRow=null;
+    }
+    document.querySelectorAll('#cropModal [data-close]').forEach(b => b.onclick = closeCropper);
+    cropCancelBtn.onclick = closeCropper;
+    cropModal.addEventListener('click', e=>{ if(e.target.hasAttribute('data-close')) closeCropper(); });
+
+    cropSaveBtn.onclick = async ()=>{
+      if (!cropper || !cropRow) return;
+      cropSaveBtn.disabled = true;
+      try{
+        const box = cropper.getData(true);
+        const imgData = cropper.getImageData();
+
+        let outW = CROP_W, outH = CROP_H;
+        const sz = cropSizeEl.value;
+        if (sz === 'orig'){ outW = Math.round(box.width); outH = Math.round(box.height); }
+        else { const [w,h] = sz.split('x').map(Number); outW = w; outH = h; }
+
+        const payload = {
+          media_url: cropRow.s_media_url,
+          x: Math.max(0, Math.round(box.x)),
+          y: Math.max(0, Math.round(box.y)),
+          w: Math.max(1, Math.round(box.width)),
+          h: Math.max(1, Math.round(box.height)),
+          rotate: Math.round(box.rotate || 0),
+          natural_w: Math.round(imgData.naturalWidth),
+          natural_h: Math.round(imgData.naturalHeight),
+          out_w: Math.max(1, outW),
+          out_h: Math.max(1, outH),
+        };
+        if (payload.x + payload.w > payload.natural_w) payload.w = payload.natural_w - payload.x;
+        if (payload.y + payload.h > payload.natural_h) payload.h = payload.natural_h - payload.y;
+
+        const res = await fetch(`${API_BASE}/api/crop-animated`, {
+          method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if(!res.ok || !data.ok) throw new Error(data.error || `HTTP ${res.status}`);
+
+        const update = await fetch(`${API_BASE}/api/system/update`, {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ s_id: cropRow.s_id, s_media_url: data.media_url })
+        });
+        const u = await update.json();
+        if(!update.ok || !u.ok) throw new Error(u.error || '更新失敗');
+
+        closeCropper();
+        await loadData();
+      }catch(err){
+        alert(`裁切失敗：${err.message||err}`);
+      }finally{
+        cropSaveBtn.disabled = false;
+      }
+    };
+
+    (async()=>{ await loadData(); })();
+    (function openByDefault(){ /* 舊頁面曾自動展開 submenu；新側欄已固定顯示，不再需要 */ })();
+  </script>
+</body>
+</html>

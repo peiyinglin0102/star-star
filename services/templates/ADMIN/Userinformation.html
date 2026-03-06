@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>管理員介面｜用戶管理</title>
+  <style>
+    * { box-sizing: border-box; }
+    :root{
+      --sb-bg:#1f2937; --sb-bg-hover:#374151; --sb-text:#e5e7eb; --sb-muted:#9ca3af;
+      --bg:#f2f2f2; --card:#ffffff; --muted:#8b8b8b; --line:#e8e8e8; --primary:#3b82f6;
+      --success:#16a34a; --warning:#f59e0b; --danger:#ef4444; --shadow:0 6px 18px rgba(0,0,0,.06); --radius:14px;
+    }
+    body { margin:0; font-family: "Arial","微軟正黑體",sans-serif; background-color: var(--bg); color:#111; }
+
+    /* ====== Sidebar：與 frontpage.html 完全一致（移除圖示） ====== */
+    .sidebar {
+      width:260px; background:var(--sb-bg); color:var(--sb-text);
+      height:100vh; padding:24px 16px;
+      position:fixed; display:flex; flex-direction:column;
+      box-shadow: 0 0 0 1px rgba(255,255,255,.04) inset, var(--shadow);
+      z-index: 10000;
+    }
+    .sidebar-scroll{
+      overflow-y:auto; overflow-x:hidden; padding-right:4px;
+      padding-bottom:16px; flex:1;
+    }
+    .admin-label{
+      text-align:center; font-weight:800;
+      font-size:16px; letter-spacing:.5px; color:var(--sb-text);
+      margin:12px 2px 18px;
+    }
+    .section{ margin:10px 0 14px; padding-top:6px; border-top:1px solid rgba(255,255,255,.06); }
+    .section:first-of-type{ border-top:none; margin-top:4px; }
+    .section-label{
+      text-align:left; color:var(--sb-muted);
+      font-weight:700; font-size:13px; letter-spacing:.6px;
+      padding:6px 6px; margin-bottom:6px; user-select:none;
+    }
+    .submenu{ display:flex; flex-direction:column; gap:8px; }
+    .submenu-link, .submenu-item{
+      display:flex; align-items:center; gap:10px;
+      text-decoration:none; text-align:left;
+      padding:10px 12px; font-size:13px; border-radius:10px;
+      color:var(--sb-text); background:transparent;
+      border:1px solid rgba(255,255,255,.12); transition:.15s;
+    }
+    .submenu-link:hover{ background:var(--sb-bg-hover); border-color:rgba(255,255,255,.18); }
+    .submenu-item{ opacity:.6; cursor:not-allowed; }
+
+    .submenu-link.is-active{
+      position: relative;
+      background:#257beb; border-color:#257beb; color:#fff;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.12);
+    }
+    .submenu-link.is-active::before{
+      content:""; position:absolute; left:-12px; top:8px; bottom:8px; width:4px;
+      background:#3b82f6; border-radius:4px;
+    }
+    .submenu-link.is-active:hover{
+      background:#1d4ed8; border-color:#1d4ed8;
+    }
+
+    .sidebar-footer{
+      margin-top:auto; padding-top:14px; padding-bottom:6px;
+      border-top:1px solid rgba(255,255,255,.06);
+    }
+    .logout-button{
+      width:100%; margin:12px 0 6px; padding:9px 10px; border-radius:9px; font-size:13px;
+      text-align:center; background:rgba(239,68,68,.10); color:#ef4444;
+      border:1px solid rgba(239,68,68,.35); cursor:pointer; transition:.15s;
+    }
+    .logout-button:hover{ background:rgba(239,68,68,.18); border-color:rgba(239,68,68,.5); }
+
+    /* ===== 主內容（桌機不動） ===== */
+    .main { margin-left:260px; padding:28px 32px 60px; }
+
+    /* ===== 本頁原有的面板 / 表格樣式（保留） ===== */
+    .panel {
+      background:#fff; border:1px solid #e8e8e8; border-radius:16px; box-shadow:0 8px 22px rgba(0,0,0,.05);
+      overflow:hidden; max-width:1200px; margin: 0 auto;
+    }
+    .panel-header { display:flex; align-items:center; justify-content:space-between; padding:18px 20px; border-bottom:1px solid #eee; }
+    .panel-title { font-size:22px; font-weight:800; }
+
+    .tools { display:flex; gap:10px; align-items:center; }
+    .search{ position:relative; display:flex; align-items:center; background:#f3f4f6; border:1px solid #e5e7eb; border-radius:12px; padding:8px 12px; width:320px; }
+    .search input{ border:none; outline:none; background:transparent; width:100%; font-size:14px; }
+    .select{ border:1px solid #e5e7eb; background:#fff; border-radius:12px; padding:8px 12px; font-size:14px; cursor:pointer; }
+
+    table{ width:100%; border-collapse:collapse; }
+    thead th{ text-align:left; font-weight:700; color:#4b5563; font-size:14px; padding:14px 20px; background:#fafafa; border-bottom:1px solid #eee; }
+    tbody td{ padding:16px 20px; border-bottom:1px solid #f0f0f0; vertical-align:middle; font-size:15px; color:#111; }
+
+    .user-cell{ display:flex; align-items:center; gap:12px; }
+    .u-avatar{ width:40px; height:40px; border-radius:50%; overflow:hidden; background:#e5e7eb; flex:0 0 auto; }
+    .u-avatar img{ width:100%; height:100%; object-fit:cover; display:block; }
+    .u-meta{ display:flex; flex-direction:column; line-height:1.2; }
+    .u-name{ font-weight:700; }
+    .u-email{ font-size:12px; color:#6b7280; }
+
+    .badge{ display:inline-flex; align-items:center; gap:6px; font-size:12px; border-radius:999px; padding:6px 10px; font-weight:700; }
+    .badge.active{ background:#dcfce7; color:#166534; }
+    .badge.inactive{ background:#e5e7eb; color:#374151; }
+
+    .action-link{ color:#2563eb; text-decoration:none; font-weight:700; }
+    .action-link:hover{ text-decoration:underline; }
+
+    /* ===== Modal ===== */
+    .modal{ display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,.45); padding:24px; overflow:auto; }
+    .modal-content{ background:#fff; width:720px; max-width:95%; margin:0 auto; border-radius:20px; position:relative; padding:24px; max-height:calc(100vh - 48px); overflow:auto; }
+    .close-btn{ position:absolute; right:16px; top:12px; font-size:24px; cursor:pointer; }
+
+    .info-row{ background:#fff1f1; border-radius:20px; padding:12px 18px; margin-bottom:12px; font-size:18px; display:flex; justify-content:space-between; align-items:center; }
+    .info-label{ flex:1; }
+    .info-value{ flex:2; }
+    .info-value input{ width:100%; padding:6px 10px; font-size:16px; border-radius:8px; border:1px solid #ccc; }
+    .edit-icon{ font-size:20px; cursor:pointer; margin-left:8px; }
+
+    .modal-actions{ margin-top:18px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+    .btn{ background:#d9d9d9; border:none; border-radius:999px; padding:8px 22px; font-size:14px; cursor:pointer; }
+    .btn:hover{ background:#bbb; }
+    .btn-danger{ background:#ef4444; color:#fff; }
+    .btn-primary{ background:#111827; color:#fff; }
+
+   /* ===== 手機 / 小平板（≤1024px）內容響應式 ===== */
+@media (max-width: 1024px) {
+  /* 主內容往下留空，避免被漢堡鍵與底部工具列擋到 */
+  .main {
+    margin-left: 0;
+    padding: calc(60px + env(safe-area-inset-top,0px)) 16px 90px;
+  }
+          .sidebar{ display:flex; flex-direction:column; }
+
+  /* 可捲動區：多留底部空間，避免被黏底的 footer 蓋住 */
+  .sidebar-scroll{
+    overflow-y:auto; 
+    padding-right:4px;
+    padding-bottom: calc(70px + env(safe-area-inset-bottom, 0px)); /* ⬅ 重要 */
+    flex:1;
+  }
+  /* 側欄抽屜化與遮罩（與 frontpage 一致） */
+  .sidebar{
+    transform: translateX(-105%);
+    transition: transform .25s ease;
+    width: 82vw; max-width: 340px; z-index: 10000;
+  }
+  body.sb-open .sidebar,
+  .sidebar.is-open{ transform: translateX(0); }
+
+  .mobile-toggle{
+    position: fixed;
+    top: max(10px, env(safe-area-inset-top,10px));
+    left: 12px; z-index: 10001;
+    background:#ffffff; color:#111;
+    border:1px solid var(--line); border-radius:12px;
+    padding:10px 14px; box-shadow:var(--shadow);
+    font-size:15px; line-height:1;
+    display:inline-block;
+  }
+
+  .sb-scrim{
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.35);
+    opacity: 0; visibility: hidden;
+    pointer-events: none;
+    transition: opacity .2s ease;
+    z-index: 9998;
+  }
+  body.sb-open .sb-scrim,
+  .sb-scrim.is-show{
+    opacity: 1; visibility: visible; pointer-events: auto;
+  }
+
+  /* 工具列：改直向疊放、寬度滿版 */
+  .tools{ flex-direction:column; align-items:stretch; gap:12px; }
+  .search{ width:100%; }
+  .select{ width:100%; }
+
+  /* 面板圓角小一點、內距調整 */
+  .panel{ border-radius:14px; box-shadow:0 8px 22px rgba(0,0,0,.05); }
+  .panel-header{ flex-direction:column; align-items:stretch; gap:12px; }
+
+  /* 表格 → 卡片：不改 HTML 與資料邏輯，只用 CSS 重排 */
+  table, thead, tbody, th, td, tr { display:block; }
+  thead { position:absolute; left:-9999px; top:-9999px; }
+
+  tbody { margin: 6px 0; }
+  tbody tr{
+    background:#fff;
+    border:1px solid #eee;
+    border-radius:14px;
+    box-shadow: var(--shadow);
+    padding: 12px 14px;
+    margin: 12px 0;
+  }
+
+  /* 每列的欄位改成「標籤：內容」的兩欄網格 */
+  tbody td{
+    border:none;
+    padding:10px 0;
+    display:grid;
+    grid-template-columns: 96px 1fr;  /* 左：標籤；右：內容 */
+    align-items:center;
+    gap:8px;
+    font-size:15px;
+  }
+
+  /* 用 nth-child 當「欄位標籤」— 不動你的渲染程式 */
+  tbody td:nth-child(1)::before { content:'用戶'; color:#6b7280; font-weight:700; }
+  tbody td:nth-child(2)::before { content:'狀態'; color:#6b7280; font-weight:700; }
+  tbody td:nth-child(3)::before { content:'註冊日期'; color:#6b7280; font-weight:700; }
+  tbody td:nth-child(4)::before { content:'最後上線'; color:#6b7280; font-weight:700; }
+  tbody td:nth-child(5)::before { content:'操作'; color:#6b7280; font-weight:700; }
+
+  /* 第一欄（用戶）在手機放大頭像與行高，易讀 */
+  .user-cell{ gap:10px; }
+  .u-avatar{ width:44px; height:44px; }
+  .u-name{ font-size:16px; }
+  .u-email{ font-size:12px; }
+
+  /* 狀態徽章與操作區的可點性提高 */
+  .badge{ transform: translateY(0); }
+  tbody td:nth-child(5){
+    grid-template-columns: 1fr;  /* 操作置滿一列 */
+  }
+  .action-link{
+    display:inline-block;
+    width:100%;
+    text-align:center;
+    padding:10px 14px;
+    border:1px solid #e5e7eb;
+    border-radius:10px;
+    font-weight:700;
+    text-decoration:none;
+    background:#f9fafb;
+  }
+  .action-link:hover{ background:#eef2ff; border-color:#c7d2fe; }
+
+  /* 行距與可點面積加大（手指友善） */
+  tbody td + td{ border-top:1px dashed #f0f0f0; }
+
+  /* Modal：小螢幕留白與寬度優化 */
+  .modal{ padding:16px; }
+  .modal-content{ width:auto; max-width:600px; border-radius:16px; padding:18px; }
+}
+#btnToggle {
+  background:#ef4444;
+  color:#fff;
+}
+#btnToggle:hover {
+  background:#dc2626;
+}
+
+  </style>
+</head>
+<body>
+    <div class="sb-scrim" hidden></div>
+ <!-- 手機：漢堡鍵 -->
+  <button class="mobile-toggle" type="button" style="display:none;">☰ 選單</button>
+
+  <!-- 側邊欄 -->
+  <div class="sidebar">
+    <div class="sidebar-scroll">
+      <div class="admin-label">管理員Admin</div>
+
+
+      <!-- 儀表板 -->
+      <div class="section">
+        <div class="section-label">儀表板 ▾</div>
+        <div class="submenu">
+          <a class="submenu-link" href="{{ url_for('admin.frontpage') }}" data-page="/ADMIN/frontpage.html">
+            數據總覽
+          </a>
+
+        </div>
+      </div>
+
+      <!-- 用戶資訊 -->
+      <div class="section">
+        <div class="section-label">用戶資訊 ▾</div>
+        <div class="submenu">
+          <a class="submenu-link" href="{{ url_for('admin.user_information') }}" data-page="/ADMIN/Userinformation.html">
+            帳號管理
+          </a>
+          <a class="submenu-link" href="{{ url_for('admin.page_answer_records') }}" data-page="/ADMIN/answer-records.html">
+            答題紀錄
+          </a>
+          <a class="submenu-link" href="{{ url_for('admin.add_user') }}" data-page="/ADMIN/add-user.html">
+            自訂題目
+          </a>
+        </div>
+      </div>
+
+      <!-- 題庫管理 -->
+      <div class="section">
+        <div class="section-label">題庫管理 ▾</div>
+        <div class="submenu">
+          <a class="submenu-link" href="{{ url_for('ai.page_question') }}" data-page="/ADMIN/Question.html">
+            上傳題目
+          </a>
+          <a class="submenu-link" href="{{ url_for('ai.page_picture_question') }}" data-page="/ADMIN/Picture-question.html">
+            圖片題庫
+          </a>
+          <a class="submenu-link" href="{{ url_for('ai.page_gif_question') }}" data-page="/ADMIN/GIF-question.html">
+            動圖題庫
+          </a>
+          <a class="submenu-link" href="{{ url_for('ai.page_situation_question') }}" data-page="/ADMIN/Situation-question.html">
+            情境題庫
+          </a>
+        </div>
+      </div>
+
+      <!-- 登出 -->
+      <button class="logout-button" onclick="location.href='{{ url_for('admin.logout') }}'">登出帳戶</button>
+    </div>
+  </div>
+
+
+  <!-- 主內容（保留原本資料與邏輯） -->
+  <div class="main">
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">用戶管理</div>
+        <div class="tools">
+          <div class="search">
+            <span style="margin-right:8px;">🔎</span>
+            <input id="keyword" placeholder="搜尋姓名或 Email…">
+          </div>
+          <select id="statusFilter" class="select">
+            <option value="all">全部狀態</option>
+            <option value="active">活躍</option>
+            <option value="disabled">非活躍</option>
+          </select>
+        </div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th style="width:38%;">用戶</th>
+            <th style="width:14%;">狀態</th>
+            <th style="width:14%;">註冊日期</th>
+            <th style="width:14%;">最後上線</th>
+            <th style="width:20%;">操作</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <div id="profileModal" class="modal">
+    <div class="modal-content">
+      <span class="close-btn" onclick="closeModal('profileModal')">&times;</span>
+      <h2 style="text-align:center; margin:8px 0 18px;">使用者個人資料</h2>
+
+      <div class="info-row">
+        <div class="info-label">暱稱：</div>
+        <div class="info-value" id="modal-nickname"></div>
+      </div>
+      <div class="info-row">
+        <div class="info-label">帳號（Email）：</div>
+        <div class="info-value" id="modal-account"></div>
+      </div>
+      <div class="info-row">
+        <div class="info-label">密碼：</div>
+        <div class="info-value" id="modal-password">●●●●●●</div>
+      </div>
+      <div class="info-row">
+        <div class="info-label">生日：</div>
+        <div class="info-value" id="modal-birthday"></div>
+      </div>
+
+      <div class="modal-actions">
+        <button id="btnToggle" class="btn"></button>
+        <button class="btn btn-primary" onclick="closeModal('profileModal')">關閉</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    
+  /* ===== RWD：手機漢堡開關 + 自動高亮（與 frontpage.html 同步） ===== */
+  (function(){
+    const sb = document.querySelector('.sidebar');
+    const mobileBtn = document.querySelector('.mobile-toggle');
+    const scrim = document.querySelector('.sb-scrim');
+    const mq = window.matchMedia('(max-width: 768px)');
+
+    const showToggle = ()=> { mobileBtn.style.display = mq.matches ? 'inline-block' : 'none'; };
+    const openSidebar = (open)=> {
+      if(open){ sb.classList.add('is-open'); if(scrim){ scrim.classList.add('is-show'); scrim.removeAttribute('hidden'); } }
+      else { sb.classList.remove('is-open'); if(scrim){ scrim.classList.remove('is-show'); scrim.setAttribute('hidden',''); } }
+    };
+
+    mq.addEventListener('change', ()=>{ showToggle(); if(!mq.matches){ openSidebar(false); }});
+    showToggle();
+
+    mobileBtn.addEventListener('click', (e)=>{ e.stopPropagation(); const willOpen = !sb.classList.contains('is-open'); openSidebar(willOpen); });
+    scrim?.addEventListener('click', ()=> openSidebar(false));
+    document.querySelector('.main')?.addEventListener('click', ()=> openSidebar(false));
+
+    // 自動高亮：比對 pathname 與 data-page
+    const path = location.pathname;
+    document.querySelectorAll('.submenu-link').forEach(a=>{
+      const dp = a.getAttribute('data-page') || '';
+      const href = a.getAttribute('href') || '';
+      if( (dp && path.endsWith(dp)) || (href && href !== '#' && path === href) ){
+        a.classList.add('is-active');
+      }
+    });
+  })();
+
+  /* ====== 以下為本頁原有的資料/互動邏輯（完全不動） ====== */
+  const fmt=(s)=>(s??'').toString();
+  const toBadge=(status)=>{
+    const s=(status||'').toLowerCase();
+    if(s==='active') return '<span class="badge active">活躍</span>';
+    if(s==='disabled') return '<span class="badge inactive">非活躍</span>';
+    return `<span class="badge inactive">${status||'—'}</span>`;
+  };
+  function svgInitials(name='U'){
+    const t=((name||'').trim()[0]||'U').toUpperCase();
+    return 'data:image/svg+xml;utf8,'+encodeURIComponent(
+      `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect width="40" height="40" rx="20" fill="#e5e7eb"/><text x="50%" y="54%" dominant-baseline="middle" text-anchor="middle" font-size="18" font-weight="700" fill="#374151">${t}</text></svg>`
+    );
+  }
+
+  let RAW_USERS=[]; let CURRENT=null;
+
+  async function loadUsers(){
+    const tbody=document.getElementById('tbody');
+    tbody.innerHTML=`<tr><td colspan="5" style="padding:24px; color:#6b7280;">載入中…</td></tr>`;
+    try{
+      const res=await fetch('/admin/api/users',{credentials:'include'});
+      const j=await res.json();
+      if(!j.ok){ tbody.innerHTML=`<tr><td colspan="5" style="padding:24px; color:#ef4444;">${j.msg||'讀取失敗'}</td></tr>`; return; }
+      RAW_USERS=j.data||[]; render();
+    }catch(e){
+      console.error(e);
+      tbody.innerHTML=`<tr><td colspan="5" style="padding:24px; color:#ef4444;">無法連線到伺服器</td></tr>`;
+    }
+  }
+
+  function render(){
+    const kw=document.getElementById('keyword').value.trim().toLowerCase();
+    const st=document.getElementById('statusFilter').value;
+    const tbody=document.getElementById('tbody'); tbody.innerHTML='';
+
+    let list=RAW_USERS.slice();
+    if(kw){ list=list.filter(u=>(u.name||'').toLowerCase().includes(kw)||(u.email||'').toLowerCase().includes(kw)); }
+    if(st!=='all'){ list=list.filter(u=>(u.status||'').toLowerCase()===st); }
+
+    if(list.length===0){ tbody.innerHTML=`<tr><td colspan="5" style="padding:24px; color:#6b7280;">沒有符合條件的用戶</td></tr>`; return; }
+
+    list.forEach(u=>{
+      const tr=document.createElement('tr');
+      const fallback=svgInitials(u.name);
+      const avatar=u.avatar?u.avatar:fallback;
+      tr.innerHTML=`
+        <td>
+          <div class="user-cell">
+            <div class="u-avatar"><img src="${avatar}" alt="" onerror="this.onerror=null; this.src='${fallback}'"></div>
+            <div class="u-meta">
+              <div class="u-name">${fmt(u.name)||'(未命名)'}</div>
+              <div class="u-email">${fmt(u.email)}</div>
+            </div>
+          </div>
+        </td>
+        <td>${toBadge(u.status)}</td>
+        <td>${fmt(u.register_date)||'—'}</td>
+        <td>${fmt(u.last_login)||'—'}</td>
+        <td><a class="action-link" href="javascript:void(0)" onclick='openProfile(${JSON.stringify(u.user_id)})'>編輯資料</a></td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function makeEditable(icon){
+    const valueDiv=icon.previousElementSibling;
+    const currentValue=valueDiv.textContent;
+    const input=document.createElement('input');
+    input.value=currentValue;
+    valueDiv.textContent=''; valueDiv.appendChild(input); input.focus();
+    input.addEventListener('blur',()=>{ valueDiv.textContent=input.value||currentValue; });
+    input.addEventListener('keydown',e=>{ if(e.key==='Enter') input.blur(); });
+  }
+
+  function openProfile(user_id){
+    const u=RAW_USERS.find(x=>String(x.user_id)===String(user_id)); if(!u) return;
+    CURRENT=u;
+    document.getElementById('modal-nickname').textContent=fmt(u.name);
+    document.getElementById('modal-account').textContent=fmt(u.email);
+    document.getElementById('modal-password').textContent='●●●●●●';
+    document.getElementById('modal-birthday').textContent=fmt(u.birthday)||'';
+
+    const btnToggle=document.getElementById('btnToggle');
+    const isDisabled=(u.status||'').toLowerCase()==='disabled';
+    btnToggle.textContent=isDisabled?'啟用帳號':'停用帳號';
+    btnToggle.onclick=toggleStatus;
+
+
+    openModal('profileModal');
+  }
+
+  function openModal(id){ document.getElementById(id).style.display='block'; }
+  function closeModal(id){ document.getElementById(id).style.display='none'; }
+  window.addEventListener('keydown',e=>{ if(e.key==='Escape') closeModal('profileModal'); });
+  window.onclick=function(e){ const m=document.getElementById('profileModal'); if(e.target===m) closeModal('profileModal'); };
+
+  async function toggleStatus(){
+    if(!CURRENT) return;
+    const nowDisabled=(CURRENT.status||'').toLowerCase()==='disabled';
+    const action=nowDisabled?'enable':'disable';
+    if(!confirm(`確定要${action==='disable'?'停用':'啟用'}此帳號？`)) return;
+
+    const res=await fetch(`/admin/api/users/${CURRENT.user_id}/status`,{
+      method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include', body:JSON.stringify({action})
+    });
+    const j=await res.json();
+    alert(j.msg || (j.ok?'狀態已更新':'更新失敗'));
+    if(j.ok){ await loadUsers(); closeModal('profileModal'); }
+  }
+
+  async function deleteUser(){
+    if(!CURRENT) return;
+    if(!confirm('此動作無法復原，確定要刪除此帳號？')) return;
+    const res=await fetch(`/admin/api/users/${CURRENT.user_id}/delete`,{ method:'POST', credentials:'include' });
+    const j=await res.json();
+    alert(j.msg || (j.ok?'已刪除':'刪除失敗'));
+    if(j.ok){ await loadUsers(); closeModal('profileModal'); }
+  }
+
+  window.onload=function(){
+    document.getElementById('keyword').addEventListener('input',render);
+    document.getElementById('statusFilter').addEventListener('change',render);
+    loadUsers();
+  };
+  </script>
+
+</body>
+</html>

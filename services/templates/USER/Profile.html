@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>星星資料</title>
+  <link href="https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&display=swap" rel="stylesheet" />
+  <style>
+/* ================================
+   Profile.html：左側頁籤 + 內容區側邊佈局
+   ================================ */
+
+/* 整頁不捲動；由右側內容區自行捲動 */
+html, body { height: 100%; }
+body{
+  margin: 0;
+  font-family: 'ZCOOL KuaiLe', "微軟正黑體", sans-serif;
+  background: url('{{ url_for("static", filename="11.png") }}') center/cover no-repeat fixed;
+  background-color: #fff;
+  text-align: center;
+  overflow: hidden;
+}
+
+/* 導覽列（原樣） */
+.navbar{
+  background: linear-gradient(to top, rgba(230,230,230,0), rgb(182,240,245));
+  padding: 30px 24px;
+  display:flex; justify-content:space-between; align-items:center;
+  position: sticky; top: 0; z-index: 1000;
+}
+.logo{ font-size:55px; font-weight:bold; color:#603d2b; cursor:pointer; font-family:'ZCOOL KuaiLe',sans-serif; }
+.nav-links{ display:flex; align-items:center; gap:40px; }
+.nav-links a{ text-decoration:none; font-size:24px; font-weight:bold; color:#603d2b; transition:color .3s; font-family:'ZCOOL KuaiLe',sans-serif; }
+.nav-links a:hover{ color:#f3b340; }
+.login-out{ background:#fff; border:2px solid #999; border-radius:30px; padding:8px 20px; cursor:pointer; font-weight:bold; transition:background-color .3s,color .3s; }
+.login-out:hover{ background:#f3b340; color:#fff; }
+
+/* ===== 主版型：左側頁籤 + 右側內容 ===== */
+:root{ --nav-h: 120px; }
+.page{
+  height: calc(100vh - var(--nav-h));
+  display: grid;
+  grid-template-columns: 220px minmax(480px, 920px);
+  justify-content: start;               /* 關鍵：不置中，改靠左 */
+  gap: 16px;
+  padding: 10px 16px 16px;
+  margin-left: 24px;                     /* 關鍵：與導覽列 padding 左對齊（LOGO 第一個「星」） */
+  box-sizing: border-box;
+}
+
+/* 左側頁籤 */
+.tabs{
+  align-self: start;
+  background: #ffffffcc;
+  border: 1px solid #f0e2c4;
+  border-radius: 16px;
+  padding: 10px;
+  box-shadow: 0 10px 24px rgba(0,0,0,.05);
+  display: grid; gap: 10px;
+}
+.tab-btn{
+  display:flex; align-items:center; justify-content:center;
+  width:100%; padding:12px 10px;
+  font-size:16px; font-weight:800;
+  color:#603d2b; background:#fff;
+  border:1px solid #f0e2c4; border-radius:12px;
+  box-shadow:0 6px 14px rgba(0,0,0,.05);
+  cursor:pointer; user-select:none;
+}
+.tab-btn.active{
+  background:#f3b340; color:#fff; border-color:#f3b340;
+  box-shadow:0 6px 14px rgba(243,179,64,.25);
+}
+
+/* 右側內容容器：改成左右兩欄（左：標題+頭像，右：表單） */
+.panel-wrap{
+  background:#ffffffea; border:1px solid #f0e2c4; border-radius:16px;
+  box-shadow:0 14px 32px rgba(0,0,0,.08);
+  height:100%;
+  overflow:hidden;
+  display:grid;
+  grid-template-columns: 220px 1fr;     /* 左側資訊欄 220px，右側表單自適應 */
+}
+
+/* 左側資訊欄（原「panel-head」轉為側欄） */
+.panel-head{
+  padding: 0 12px;
+  border-right: 1px solid #f0e2c4;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 40px;
+  gap: 16px;
+}
+.panel-head h2{ margin:0; color:#603d2b; margin-top: 40px; }
+
+.panel-body{
+  padding: 18px;
+  overflow: hidden;       /* ★ 不可捲動，且避免出現卷軸 */
+  text-align: left;
+
+}
+
+/* 表單樣式（原色維持） */
+.form-box{ max-width: none; margin: 0 auto; }   /* 讓右欄可用滿 */
+.row{ margin-bottom: 14px; }
+.row label{ display:block; font-size:14px; color:#555; margin-bottom:6px; }
+.row input, .row select{
+  width:100%; padding:12px; border:none; background:#eee; border-radius:8px; font-size:16px;
+}
+.panel-body{
+  padding: 18px;
+  overflow: hidden;       /* ★ 不可捲動，且避免出現卷軸 */
+  text-align: left;
+  margin-top: 60px;
+}
+.actions{ display:flex; gap:10px; margin-top:12px; }
+.btn{ border:none; padding:10px 16px; border-radius:8px; cursor:pointer; font-weight:bold; }
+.btn.save{ background:#f3b340; color:#fff; }
+.btn.reset{ background:#ddd; }
+.hr{ height:1px; background:#eee; margin:18px 0; }
+.msg{ margin-top:10px; font-size:14px; color:#444; min-height:18px; }
+
+/* 頭像（沿用） */
+.avatar{ width:96px; height:96px; border-radius:50%; background:#eee center/cover no-repeat; border:3px solid #f3b340; }
+.avatar-wrap{ display:flex; justify-content:center; }
+
+/* 變更密碼面板（作為第二分頁） */
+#pwdSection{ display:block; }
+/* 原本你有 max-width:none; 這裡改回適中寬度 */
+.form-box{
+  max-width: 760px;       /* ★ 收斂在容器內 */
+  margin: 0 auto 0 0;     /* 靠左對齊 */
+}
+
+.row input, .row select{
+  width: 100%;
+  max-width: 100%;        /* ★ 確保不超出容器 */
+  box-sizing: border-box; /* ★ 包含內距，避免撐寬 */
+}
+
+/* 導覽列齒輪（沿用） */
+.nav-settings{
+  display:inline-flex; align-items:center; justify-content:center;
+  width:44px; height:44px; border-radius:12px; border:2px solid #c9b9a8;
+  background:#fff9e8; cursor:pointer; transition:all .2s ease;
+  box-shadow:0 6px 12px rgba(0,0,0,.06);
+}
+.nav-settings:hover{ background:#fbe1a8; transform:translateY(-1px); }
+
+/* Modal 與手機菜單（沿用原樣） */
+.sysset-modal{ position:fixed; inset:0; background:rgba(0,0,0,.35); display:none; align-items:center; justify-content:center; z-index:2000; padding:18px; }
+.sysset-modal[aria-hidden="false"]{ display:flex; }
+.sysset-dialog{ width:min(720px,92vw); background:#fffef8; border:2px solid #f3deb7; border-radius:18px; box-shadow:0 24px 60px rgba(0,0,0,.22); overflow:hidden; animation:sysset-pop .12s ease-out; }
+@keyframes sysset-pop{ from{transform:scale(.98);opacity:.5} to{transform:scale(1);opacity:1} }
+.sysset-header{ display:flex; align-items:center; justify-content:space-between; padding:14px 16px; background:linear-gradient(180deg,#fff7dc,#fffef6); border-bottom:1px solid #f0e2c4; }
+.sysset-header h3{ margin:0; color:#603d2b; font-size:20px; letter-spacing:.5px; }
+.sysset-close{ border:none; background:transparent; cursor:pointer; font-size:20px; padding:6px 10px; border-radius:10px; color:#603d2b; }
+.sysset-close:hover{ background:#fff0cc; }
+.sysset-body{ padding:16px; display:grid; gap:16px; }
+.sysset-card{ background:#ffffff; border:1px solid #f0e2c4; border-radius:14px; padding:14px; box-shadow:0 10px 24px rgba(0,0,0,.05); }
+.sysset-card h4{ margin:0 0 6px; color:#603d2b; }
+.sysset-hint{ color:#8b6b55; margin:.25rem 0 .75rem; }
+.sysset-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.sysset-grid label{ display:grid; gap:6px; font-size:14px; color:#6b4b35; }
+.sysset-grid input{ padding:10px 12px; border:1px solid #e8d9b8; border-radius:12px; font-size:16px; background:#fffef8; }
+.sysset-actions{ display:flex; gap:10px; margin-top:8px; }
+.sysset-primary{ background:#f3b340; color:#fff; border:none; border-radius:12px; padding:10px 14px; cursor:pointer; box-shadow:0 6px 14px rgba(243,179,64,.35); }
+.sysset-primary:hover{ filter:brightness(1.05); }
+.sysset-ghost{ background:#fff8e6; color:#8b6b35; border:1px solid #f0e2c4; border-radius:12px; padding:10px 14px; cursor:pointer; }
+.sysset-ghost:hover{ background:#ffefc8; }
+.sysset-status{ margin-top:8px; font-weight:700; color:#603d2b; }
+.sysset-slider-row{ display:flex; align-items:center; gap:12px; }
+.sysset-slider-row input[type="range"]{ width:100%; accent-color:#f3b340; }
+.sysset-row{ display:flex; align-items:center; gap:12px; margin-top:8px; color:#603d2b; }
+.sysset-toast{ position:fixed; left:50%; bottom:100px; transform:translateX(-50%); background:#111827; color:#fff; padding:10px 14px; border-radius:10px; box-shadow:0 10px 24px rgba(0,0,0,.25); z-index:2001; }
+
+.hamburger{ display:none; }
+.mobile-menu, .mobile-menu-backdrop{ display:none; }
+.mobile-menu.active{ display:block; }
+.mobile-menu-backdrop.active{ display:block; }
+
+/* 手機（保留對齊邏輯；頁籤改上方水平） */
+@media (max-width: 768px){
+  .navbar{
+    position: fixed !important; top: 0; left: 0; right: 0;
+    padding: 12px 16px !important;
+    background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,255,255,0)) !important;
+    backdrop-filter: blur(2px);
+    z-index: 1200;
+  }
+  .logo{ font-size:28px !important; }
+  .nav-links{ display:none !important; }
+  .hamburger{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:44px; height:44px; border-radius:12px; border:2px solid #c9b9a8;
+    background:#fff9e8; cursor:pointer; transition:all .2s ease;
+    box-shadow:0 6px 12px rgba(0,0,0,.06); z-index:1400;
+  }
+  .page{
+    grid-template-columns: 1fr;          /* 手機：頁籤改上方 */
+    margin-left: 16px;                   /* 手機視覺微調 */
+    padding-top: 64px;
+  }
+  .tabs{
+    display:flex; gap:10px; padding:10px; position: sticky; top: 64px; z-index: 5;
+    background:#ffffffee; border-radius:12px; margin:0 0 6px;
+  }
+  .panel-wrap{ grid-template-columns: 1fr; }
+  .panel-head{ border-right:none; border-bottom:1px solid #f0e2c4; }
+}
+body.no-scroll{ overflow: hidden; }
+/* === 手機版：可捲動 + 縮短頭像留白（不影響電腦版） === */
+@media (max-width: 768px){
+  html, body { height: auto; }
+  body { overflow: auto; }                 /* 允許整頁滑動 */
+
+  .page{ 
+    height: auto;                          /* 不鎖死高度 */
+    padding-bottom: 24px;                  /* 底部安全間距 */
+  }
+
+  .panel-wrap{ height: auto; }             /* 面板高度跟內容走 */
+
+  .panel-head{
+    margin-top: 0;                         /* 收掉多餘上邊距 */
+    padding: 12px 0;                       /* 精簡上下留白 */
+    gap: 8px;
+  }
+  .panel-head h2{ margin-top: 0; }
+
+  .avatar{                                  /* 手機縮小頭像 */
+    width: 72px; height: 72px; 
+    border-width: 2px;
+  }
+
+  .panel-body{
+    margin-top: 8px;                        /* 減少上方留白 */
+    overflow: visible;                      /* 讓內容自然展開 */
+    padding-top: 12px;
+  }
+}
+@media (max-width: 768px){
+  /* 手機版頭像微調：往上靠近分隔線一點 */
+  .panel-head{
+    padding-bottom: 4px;       /* 原本 16px → 改小一點 */
+  }
+  .avatar-wrap{
+    margin: 6px 0 2px 0;       /* 上下間距縮小，整體上移 */
+  }
+  .avatar{
+    width: 72px;
+    height: 72px;
+    border-width: 2px;
+  }
+  .row label {
+  margin-top: 5px;  /* ★ 新增：每個 label 與上方間距5px */
+}
+
+}
+
+
+  </style>
+  <style>
+/* === 覆寫：讓 Profile.html 的手機漢堡選單跟 User_Home.html 一致 === */
+
+/* 桌機預設隱藏漢堡、手機選單預設不顯示 */
+.hamburger{ display:none; }
+.mobile-menu, .mobile-menu-backdrop{ display:none; }
+.mobile-menu.active{ display:block; }
+.mobile-menu-backdrop.active{ display:block; }
+
+@media (max-width: 768px){
+  /* 導覽列固定 + 毛玻璃漸變（與 Home 一致） */
+  .navbar{
+    position: fixed !important; top: 0; left: 0; right: 0;
+    padding: 12px 16px !important;
+    background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,255,255,0)) !important;
+    backdrop-filter: blur(2px);
+    z-index: 1200;
+  }
+  .logo{ font-size: 28px !important; }
+
+  /* 手機：上排連結改由漢堡選單承載 */
+  .nav-links{ display: none !important; }
+
+  /* 漢堡按鈕（右上） */
+  .hamburger{
+    display: inline-flex !important; align-items:center; justify-content:center;
+    width: 44px; height: 44px; border-radius: 12px; border: 2px solid #c9b9a8;
+    background:#fff9e8; cursor: pointer; transition: all .2s ease;
+    box-shadow: 0 6px 12px rgba(0,0,0,.06);
+    z-index: 1400;
+  }
+  .hamburger:hover{ background:#fbe1a8; transform: translateY(-1px); }
+
+  /* 手機下拉選單容器（與 Home 版位、大小一致） */
+  .mobile-menu{
+    position: fixed !important; top: 64px !important; right: 12px !important;
+    width: min(380px, calc(100dvw - 24px)) !important;
+    max-height: calc(100dvh - 88px) !important;
+    overflow-y: auto !important; overflow-x: hidden !important;
+    box-sizing: border-box !important;
+
+    background: #ffffffee !important;
+    border: 1px solid #f0e2c4 !important;
+    border-radius: 16px !important;
+    box-shadow: 0 16px 36px rgba(0,0,0,.18) !important;
+    padding: 8px !important;
+    z-index: 1300 !important;
+    backdrop-filter: blur(4px) !important;
+    display: none; /* 由 .active 控制 */
+  }
+
+  /* 標題列（功能選單） */
+  .mobile-menu-title{
+    position: sticky !important; top: 0 !important;
+    background: #fffdf6 !important; color:#603d2b !important;
+    font-weight: 900 !important; font-size: 18px !important; letter-spacing: .5px !important;
+    text-align: center !important;
+    padding: 12px 12px 12px !important;
+    margin: -8px -8px 19px !important;
+    border-top-left-radius: 16px !important;
+    border-top-right-radius: 16px !important;
+    box-shadow: inset 0 -1px 0 #f0e2c4 !important;
+    z-index: 1 !important;
+  }
+
+  /* 選單項目：避免按鈕撐寬、樣式與 Home 一致 */
+  .mobile-menu a, .mobile-menu button{
+    display: flex !important; align-items: center !important; gap: 10px !important;
+    justify-content: center !important; text-align: center !important;
+    width: 100% !important; box-sizing: border-box !important;
+    padding: 12px 14px !important;
+    font-size: 16px !important; font-weight: 700 !important;
+    color: #603d2b !important; background: #fff !important;
+    border: 1px solid #f0e2c4 !important; border-radius: 12px !important;
+    margin: 6px 0 !important; text-decoration: none !important;
+    box-shadow: 0 6px 14px rgba(0,0,0,.05) !important;
+    white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important;
+    transition: transform .03s ease, opacity .2s ease !important;
+  }
+  .mobile-menu a:active, .mobile-menu button:active{ transform: scale(.99) !important; }
+
+  /* 登出＝主動作（主色底 + 白字） */
+  .mobile-menu .logout{
+    background: #f3b340 !important;
+    color: #ffffff !important;
+    border: 1px solid #f3b340 !important;
+    box-shadow: 0 6px 14px rgba(243,179,64,.25) !important;
+  }
+  .mobile-menu .logout:hover{ filter: brightness(1.05) !important; }
+  .mobile-menu .logout:active{ transform: scale(.99) !important; }
+
+  /* 背景遮罩（與 Home 一致） */
+  .mobile-menu-backdrop{
+    position: fixed !important; inset: 0 !important;
+    background: rgba(0,0,0,.25) !important;
+    z-index: 1250 !important;
+    display: none !important;
+  }
+}
+</style>
+
+</head>
+<body data-logout-url="{{ url_for('auth.logout') }}">
+  <script src="{{ url_for('static', filename='js/parent_timer.js') }}?v=20251025-6"></script>
+
+  <!-- 導覽列 -->
+  <header class="navbar" id="globalHeader">
+    <div class="logo" onclick="window.location.href='{{ url_for('auth.home') }}'">星星的世界</div>
+    <nav class="nav-links">
+      <a href="{{ url_for('teach.page') }}">星星小教室</a>
+      <a href="{{ url_for('auth.profile_page') }}">星星資料</a>
+      <a href="{{ url_for('learn.learning_process') }}">星星旅程</a>
+      <button id="openSettings" class="nav-settings" title="系統設定" aria-label="系統設定">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" stroke="#603d2b" stroke-width="1.8"/>
+          <path d="M19 12a7 7 0 0 0-.07-.98l1.74-1.35-1.8-3.12-2.08.66a7 7 0 0 0-1.7-.98l-.3-2.17h-3.5l-.3 2.17a7 7 0 0 0-1.7.98l-2.08-.66-1.8 3.12L5.07 11A7 7 0 0 0 5 12c0 .33.02 .65.07 .98l-1.74 1.35 1.8 3.12 2.08-.66c.53 .41 1.1 .74 1.7 .98l.3 2.17h3.5l.3-2.17c.6-.24 1.17-.57 1.7-.98l2.08 .66 1.8-3.12L18.93 13c.05-.33 .07-.65 .07-.98Z" stroke="#603d2b" stroke-width="1.8"/>
+        </svg>
+      </button>
+      <button class="login-out" onclick="location.href='{{ url_for('auth.logout') }}'">登出</button>
+    </nav>
+    <button class="hamburger" id="mobileMenuBtn" aria-label="開啟選單" aria-expanded="false" aria-controls="mobileMenu">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M4 7h16M4 12h16M4 17h16" stroke="#603d2b" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    </button>
+  </header>
+
+  <!-- 手機選單 -->
+  <div class="mobile-menu-backdrop" id="mobileMenuBackdrop"></div>
+  <div class="mobile-menu" id="mobileMenu" role="menu" aria-hidden="true">
+    <div class="mobile-menu-title" role="heading" aria-level="1">功能選單</div>
+    <a href="{{ url_for('teach.page') }}" role="menuitem">🌟 星星小教室</a>
+    <a href="{{ url_for('auth.profile_page') }}" role="menuitem">🧒 星星資料</a>
+    <a href="{{ url_for('learn.learning_process') }}" role="menuitem">🗺️ 星星旅程</a>
+    <button type="button" id="mobileOpenSettings" role="menuitem" aria-label="系統設定">⚙️ 系統設定</button>
+    <button type="button" class="logout" id="mobileLogout" role="menuitem">登出</button>
+  </div>
+
+  <!-- 主體：左側頁籤 + 右側面板（左：標題頭像／右：表單） -->
+  <main class="page" id="pageRoot">
+    <aside class="tabs" role="tablist" aria-orientation="vertical">
+      <button class="tab-btn active" id="tabProfileBtn" role="tab" aria-controls="tabProfile" aria-selected="true">🧒 資料編輯</button>
+      <button class="tab-btn" id="tabPwdBtn" role="tab" aria-controls="tabPwd" aria-selected="false">🔒 變更密碼</button>
+    </aside>
+
+    <section class="panel-wrap">
+      <!-- 左欄：標題 + 頭像（固定 220px） -->
+      <div class="panel-head">
+        <h2 id="panelTitle">星星資料</h2>
+        <div class="avatar-wrap"><div id="avatar" class="avatar"></div></div>
+      </div>
+
+      <!-- 右欄：內容（可捲動） -->
+      <div class="panel-body">
+        <!-- Tab 1：資料編輯 -->
+        <div id="tabProfile" role="tabpanel" aria-labelledby="tabProfileBtn">
+          <div class="form-box">
+            <div class="row">
+              <label>暱稱（name）</label>
+              <input type="text" id="name" placeholder="暱稱">
+            </div>
+            <div class="row">
+              <label>生日（yyyy/mm/dd）</label>
+              <input type="text" id="birthday" placeholder="2000/01/01">
+            </div>
+            <div class="row">
+              <label>性別（male / female / other）</label>
+              <select id="gender">
+                <option value="male">male</option>
+                <option value="female">female</option>
+                <option value="other">other</option>
+              </select>
+            </div>
+            <div class="row">
+              <label>信箱（email）</label>
+              <input type="email" id="email" placeholder="you@example.com" disabled>
+            </div>
+            <div class="actions">
+              <button class="btn save" onclick="saveProfile()">儲存資料</button>
+            </div>
+            <div class="msg" id="msg"></div>
+          </div>
+        </div>
+
+        <!-- Tab 2：變更密碼 -->
+        <div id="tabPwd" role="tabpanel" aria-labelledby="tabPwdBtn" hidden>
+          <div id="pwdSection" class="form-box">
+            <div class="row">
+              <label>舊密碼</label>
+              <input type="password" id="old_password">
+            </div>
+            <div class="row">
+              <label>新密碼（8~12碼，含大小寫+數字）</label>
+              <input type="password" id="new_password">
+            </div>
+            <div class="row">
+              <label>確認新密碼</label>
+              <input type="password" id="confirm_password">
+            </div>
+            <div class="actions">
+              <button class="btn save" onclick="changePassword()">更新密碼</button>
+              <button class="btn reset" onclick="clearPwd()">清除</button>
+            </div>
+            <div class="msg" id="pwdMsg"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- 系統設定 Modal（沿用） -->
+  <div id="sysSettingsModal" class="sysset-modal" aria-hidden="true">
+    <div class="sysset-dialog" role="dialog" aria-modal="true" aria-labelledby="sysset-title">
+      <div class="sysset-header">
+        <h3 id="sysset-title">系統設定</h3>
+        <button id="sysSettingsClose" class="sysset-close" aria-label="關閉">✕</button>
+      </div>
+      <div class="sysset-body">
+        <section class="sysset-card">
+          <h4>⏱ 使用時間控管</h4>
+          <p class="sysset-hint">家長可設定時長；倒數前 1 分鐘有語音提醒，時間到會自動登出。</p>
+          <div class="sysset-grid">
+            <label>小時 <input id="timeHours" type="number" min="0" max="12" step="1" value="0"></label>
+            <label>分鐘 <input id="timeMinutes" type="number" min="0" max="720" step="1" value="30"></label>
+          </div>
+          <div class="sysset-actions">
+            <button id="timerStart" class="sysset-primary" type="button" onclick="__uiStartTimer()">開始計時</button>
+            <button id="timerStop" class="sysset-ghost" type="button" onclick="__uiStopTimer()" disabled>停止計時</button>
+          </div>
+          <div class="sysset-status">剩餘時間：<span id="timeRemain">未開始</span></div>
+        </section>
+        <section class="sysset-card">
+          <h4>🗣️ 題庫語音播放速度</h4>
+          <p class="sysset-hint">調整全站語音朗讀速度（烏龜 ←→ 兔子）。</p>
+          <div class="sysset-slider-row">
+            <div class="sysset-row">
+              <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                <input id="ttsEnabled" type="checkbox"> 啟用題庫語音
+              </label>
+            </div>
+            <span aria-hidden="true">🐢</span>
+            <input id="ttsRate" type="range" min="0.50" max="2.00" step="0.01" inputmode="decimal">
+            <span aria-hidden="true">🐇</span>
+          </div>
+          <div class="sysset-row">
+            目前倍率：<span id="ttsRateLabel">1.0×</span>
+            <button id="ttsTest" class="sysset-ghost">試聽一句</button>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <div id="sysWarnToast" class="sysset-toast" hidden></div>
+
+<script>
+/* 量測導覽列高度→寫入 CSS 變數 */
+(function setNavHeight(){
+  const hdr = document.getElementById('globalHeader');
+  const h = hdr ? hdr.getBoundingClientRect().height : 120;
+  document.documentElement.style.setProperty('--nav-h', (h) + 'px');
+  let rid = null;
+  const onResize = () => {
+    cancelAnimationFrame(rid);
+    rid = requestAnimationFrame(() => {
+      const nh = hdr ? hdr.getBoundingClientRect().height : 120;
+      document.documentElement.style.setProperty('--nav-h', nh + 'px');
+    });
+  };
+  window.addEventListener('resize', onResize);
+})();
+</script>
+
+<script>
+/* 手機漢堡 */
+(function(){
+  const btn = document.getElementById('mobileMenuBtn');
+  const menu = document.getElementById('mobileMenu');
+  const backdrop = document.getElementById('mobileMenuBackdrop');
+  const logoutUrl = document.body.getAttribute('data-logout-url') || '/logout';
+  const openSettingsBtn = document.getElementById('openSettings');
+  const mobileOpenSettings = document.getElementById('mobileOpenSettings');
+  const mobileLogout = document.getElementById('mobileLogout');
+
+  const mq = window.matchMedia('(max-width: 768px)');
+  function syncBurger(){
+    const show = mq.matches;
+    if (btn) btn.style.display = show ? 'inline-flex' : 'none';
+    if(!show){
+      menu?.classList.remove('active');
+      backdrop?.classList.remove('active');
+      btn?.setAttribute('aria-expanded','false');
+      menu?.setAttribute('aria-hidden','true');
+    }
+  }
+  syncBurger(); mq.addEventListener('change', syncBurger);
+
+  function toggleMenu(force){
+    const willOpen = (force === true) || (force !== false && !menu.classList.contains('active'));
+    menu.classList.toggle('active', willOpen);
+    backdrop.classList.toggle('active', willOpen);
+    btn?.setAttribute('aria-expanded', String(willOpen));
+    menu?.setAttribute('aria-hidden', String(!willOpen));
+  }
+  btn?.addEventListener('click', ()=>toggleMenu());
+  backdrop?.addEventListener('click', ()=>toggleMenu(false));
+  mobileOpenSettings?.addEventListener('click', ()=>{ toggleMenu(false); openSettingsBtn?.click(); });
+  mobileLogout?.addEventListener('click', ()=>{ toggleMenu(false); location.href = logoutUrl; });
+  document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape' && menu.classList.contains('active')) toggleMenu(false); });
+})();
+</script>
+
+<script>
+/* API 串接（沿用） */
+const STATIC_BASE = "{{ url_for('static', filename='') }}";
+
+async function loadProfile() {
+  const msg = document.getElementById('msg'); if (msg) msg.textContent = '';
+  try {
+    const resp = await fetch('{{ url_for("auth.api_me") }}', { credentials: 'same-origin' });
+    const data = await resp.json();
+    if (!resp.ok || !data.ok) throw new Error(data.msg || '讀取失敗');
+    const u = data.data;
+
+    document.getElementById('name').value = u.name || '';
+    document.getElementById('birthday').value = u.birthday || '';
+    document.getElementById('gender').value = (u.gender || 'other').toLowerCase();
+    document.getElementById('email').value = u.email || '';
+
+    const avatarPath = u.avatar ? u.avatar : 'avatars/1.png';
+    document.getElementById('avatar').style.backgroundImage = `url('${STATIC_BASE}${avatarPath}')`;
+  } catch (e) {
+    if (msg) msg.textContent = e.message || '載入失敗';
+  }
+}
+
+async function saveProfile() {
+  const msg = document.getElementById('msg'); if (msg) msg.textContent = '';
+  const payload = {
+    name: document.getElementById('name').value.trim(),
+    birthday: document.getElementById('birthday').value.trim(),
+    gender: document.getElementById('gender').value.trim(),
+    email: document.getElementById('email').value.trim(),
+  };
+  try {
+    const resp = await fetch('{{ url_for("auth.api_update_me") }}', {
+      method: 'POST', headers: {'Content-Type':'application/json'}, credentials: 'same-origin',
+      body: JSON.stringify(payload)
+    });
+    const data = await resp.json();
+    if (!resp.ok || !data.ok) throw new Error(data.msg || '更新失敗');
+    if (msg) msg.textContent = '✅ 資料已更新';
+  } catch (e) {
+    if (msg) msg.textContent = '❌ ' + (e.message || '更新失敗');
+  }
+}
+
+async function changePassword() {
+  const msg = document.getElementById('pwdMsg'); if (msg) msg.textContent = '';
+  const payload = {
+    old_password: document.getElementById('old_password').value,
+    new_password: document.getElementById('new_password').value,
+    confirm_password: document.getElementById('confirm_password').value,
+  };
+  try {
+    const resp = await fetch('{{ url_for("auth.api_me_password") }}', {
+      method: 'POST', headers: {'Content-Type':'application/json'}, credentials: 'same-origin',
+      body: JSON.stringify(payload)
+    });
+    const data = await resp.json();
+    if (!resp.ok || !data.ok) throw new Error(data.msg || '更新密碼失敗');
+    clearPwd();
+    if (msg) msg.textContent = '✅ 密碼已更新';
+  } catch (e) {
+    if (msg) msg.textContent = '❌ ' + (e.message || '更新密碼失敗');
+  }
+}
+function clearPwd(){ ['old_password','new_password','confirm_password'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; }); }
+</script>
+
+<script>
+/* 頁籤切換 */
+(function tabs(){
+  const profileBtn = document.getElementById('tabProfileBtn');
+  const pwdBtn     = document.getElementById('tabPwdBtn');
+  const panelTitle = document.getElementById('panelTitle');
+  const tab1 = document.getElementById('tabProfile');
+  const tab2 = document.getElementById('tabPwd');
+
+  function activate(which){
+    const isProfile = which === 'profile';
+    profileBtn.classList.toggle('active', isProfile);
+    pwdBtn.classList.toggle('active', !isProfile);
+    profileBtn.setAttribute('aria-selected', String(isProfile));
+    pwdBtn.setAttribute('aria-selected', String(!isProfile));
+    tab1.hidden = !isProfile;
+    tab2.hidden = isProfile;
+    panelTitle.textContent = isProfile ? '星星資料' : '變更密碼';
+    document.querySelector('.panel-body')?.scrollTo({top:0, behavior:'instant'});
+  }
+  profileBtn.addEventListener('click', ()=>activate('profile'));
+  pwdBtn.addEventListener('click', ()=>activate('pwd'));
+  activate('profile');
+})();
+</script>
+
+<script>
+/* 語音設定（沿用）與倒數控制 */
+function pickPreferredVoice() {
+  const voices = speechSynthesis.getVoices() || [];
+  const by = (fn) => voices.find(fn);
+  let v = by(v => /Google/i.test(v.name) && v.lang === 'zh-TW')
+        || by(v => /Google/i.test(v.name) && /^zh(-|_)/i.test(v.lang))
+        || by(v => v.lang === 'zh-TW')
+        || by(v => /^zh(-|_)/i.test(v.lang));
+  return v || voices[0] || null;
+}
+window.StarSpeech = {
+  rate: Number(localStorage.getItem('tts.rate') || 1.0),
+  enabled: (localStorage.getItem('tts.enabled') ?? '1') !== '0',
+  voice: null,
+  ensureVoiceReady(){
+    return new Promise(res=>{
+      const pick = () => { this.voice = pickPreferredVoice(); res(); };
+      if ((speechSynthesis.getVoices() || []).length) pick();
+      else {
+        const h = () => { pick(); speechSynthesis.removeEventListener('voiceschanged', h); };
+        speechSynthesis.addEventListener('voiceschanged', h);
+        speechSynthesis.getVoices();
+      }
+    });
+  },
+  async speak(text){
+    if (!this.enabled) return;
+    await this.ensureVoiceReady();
+    const u = new SpeechSynthesisUtterance(text);
+    if (this.voice) { u.voice = this.voice; if (this.voice.lang) u.lang = this.voice.lang; }
+    else { u.lang = 'zh-TW'; }
+    u.rate = Math.min(2, Math.max(0.5, this.rate));
+    u.pitch = 1.0;
+    try { speechSynthesis.cancel(); } catch(_){}
+    speechSynthesis.speak(u);
+  }
+};
+(() => {
+  const $ = s => document.querySelector(s);
+  const openBtn  = $('#openSettings');
+  const modal    = $('#sysSettingsModal');
+  const closeBtn = $('#sysSettingsClose');
+  const inputH   = $('#timeHours');
+  const inputM   = $('#timeMinutes');
+  const btnStart = $('#timerStart');
+  const btnStop  = $('#timerStop');
+  const remainEl = $('#timeRemain');
+  const rate     = $('#ttsRate');
+  const rateLbl  = $('#ttsRateLabel');
+  const btnTest  = $('#ttsTest');
+  const enabled  = $('#ttsEnabled');
+  const logoutUrl = document.body.getAttribute('data-logout-url') || '/logout';
+
+  const openModal  = () => modal.setAttribute('aria-hidden','false');
+  const closeModal = () => modal.setAttribute('aria-hidden','true');
+  openBtn.addEventListener('click', openModal);
+  closeBtn.addEventListener('click', closeModal);
+  modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
+
+  const initRate = () => {
+    let saved = parseFloat(localStorage.getItem('tts.rate'));
+    if (Number.isNaN(saved)) saved = 1.0;
+    saved = Math.min(2, Math.max(0.5, saved));
+    rate.value = saved.toFixed(2);
+    rateLbl.textContent = saved.toFixed(2) + '×';
+    window.StarSpeech && (window.StarSpeech.rate = saved);
+    localStorage.setItem('tts.rate', saved.toFixed(2));
+  };
+  const initEnabled = () => {
+    const on = (localStorage.getItem('tts.enabled') ?? '1') !== '0';
+    enabled.checked = on;
+    window.StarSpeech && (window.StarSpeech.enabled = on);
+    localStorage.setItem('tts.enabled', on ? '1' : '0');
+  };
+  rate.addEventListener('input', () => {
+    let v = parseFloat(rate.value);
+    if (Number.isNaN(v)) v = 1.0;
+    v = Math.min(2, Math.max(0.5, v));
+    rate.value = v.toFixed(2);
+    rateLbl.textContent = v.toFixed(2) + '×';
+    window.StarSpeech && (window.StarSpeech.rate = v);
+    localStorage.setItem('tts.rate', v.toFixed(2));
+  });
+  enabled.addEventListener('change', () => {
+    const on = !!enabled.checked;
+    window.StarSpeech && (window.StarSpeech.enabled = on);
+    localStorage.setItem('tts.enabled', on ? '1' : '0');
+  });
+  btnTest.addEventListener('click', () => {
+    window.StarSpeech?.speak('這是速度測試。現在的語速是 ' + window.StarSpeech.rate.toFixed(2) + ' 倍。');
+  });
+  initRate(); initEnabled();
+
+  const fmt = (ms) => { if (ms <= 0) return '00:00'; const s = Math.floor(ms/1000), m = Math.floor(s/60); return String(m).padStart(2,'0') + ':' + String(s%60).padStart(2,'0'); };
+  const refreshRemain = () => {
+    const { active, left } = window.ParentTimer?.status() || {active:false,left:0};
+    remainEl.textContent = active ? fmt(left) : '未開始';
+    btnStart.disabled = active; btnStop.disabled = !active;
+    if (active && left <= 0) window.location.href = logoutUrl;
+  };
+  btnStart.addEventListener('click', () => { const h = Math.max(0, parseInt(inputH.value || '0', 10)); const m = Math.max(0, parseInt(inputM.value || '0', 10)); const ms = (h*60 + m) * 60 * 1000; if (ms > 0) ParentTimer.start(ms); });
+  btnStop.addEventListener('click',  () => ParentTimer.stop());
+  setInterval(refreshRemain, 500);
+  window.addEventListener('storage', (e) => { if (e.key === 'timer.active' || e.key === 'timer.endAt') refreshRemain(); });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshRemain(); });
+  refreshRemain();
+})();
+</script>
+
+<script> window.onload = loadProfile; </script>
+</body>
+</html>

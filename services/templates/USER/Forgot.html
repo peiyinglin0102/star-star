@@ -1,0 +1,145 @@
+<!-- services/templates/USER/Forgot.html -->
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <!-- ★ 關鍵：補上 viewport，讓手機用正確寬度排版 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>重設密碼</title>
+  <link href="https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --ink:#603d2b;
+      --brand:#D37932;
+      --card:#fff;
+      --bg:#f5f5f5;
+      --shadow:0 8px 24px rgba(0,0,0,.12);
+      --radius:12px;
+    }
+
+    *{ box-sizing: border-box; }
+    html, body{ height:100%; }
+    body{
+      font-family: "微軟正黑體", system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans TC", sans-serif;
+      margin:0; background-color: var(--bg);
+      display:flex; flex-direction:column; align-items:center; min-height:100dvh;
+    }
+
+    /* 導覽列（與首頁一致） */
+    .navbar{
+      width:100%;
+      background: linear-gradient(to top, rgba(230,230,230,0), rgb(182,240,245));
+      padding: 30px 24px;
+      display:flex; justify-content:space-between; align-items:center;
+      position: sticky; top:0; z-index:1000;
+    }
+    .logo{
+      font-size:55px; font-weight:bold; color:var(--ink);
+      font-family:'ZCOOL KuaiLe', sans-serif; cursor:pointer; user-select:none;
+    }
+
+    .box{
+      width: min(92vw, 460px);
+      background: var(--card);
+      margin: 56px auto 40px;
+      padding: 28px 22px;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+    h2{ text-align:center; margin:0 0 16px; color:var(--ink); letter-spacing:.5px; }
+    p{ margin:0; }
+
+    .input-group{ margin:14px 0; display:flex; flex-direction:column; gap:6px; }
+    label{ font-size:14px; color:#444; }
+    input[type="password"]{
+      padding:12px 14px; border:1px solid #e6e6e6; background:#f7f7f7;
+      border-radius:10px; font-size:16px; outline:none;
+      transition: border-color .15s, background-color .15s, box-shadow .15s;
+    }
+    input[type="password"]:focus{
+      border-color:#f3b340; background:#fffef8; box-shadow:0 0 0 3px rgba(243,179,64,.25);
+    }
+    .hint{ font-size:12px; color:#666; }
+
+    .btn-row{ display:flex; justify-content:center; margin-top:16px; }
+    .btn{
+      background:var(--brand); color:#fff; border:none;
+      padding:12px 26px; font-weight:700; font-size:16px;
+      border-radius:12px; cursor:pointer;
+      box-shadow:0 8px 18px rgba(211,121,50,.25);
+      transition: transform .04s, filter .15s; touch-action:manipulation;
+    }
+    .btn:active{ transform:scale(.98); }
+    .btn:hover{ filter:brightness(1.03); }
+
+    /* 手機優化 */
+    @media (max-width: 768px){
+      body{ background-attachment: scroll; }        /* iOS 避免抖動 */
+      .navbar{ padding:16px; }
+      .logo{ font-size:32px; }
+      .box{ width:92vw; margin:20px auto 24px; padding:22px 18px; border-radius:14px; }
+      input[type="password"]{ font-size:17px; }
+      .btn{ width:100%; padding:14px 16px; font-size:17px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="navbar">
+    <div class="logo" onclick="location.href='{{ url_for("auth.index") }}'">星星的世界</div>
+  </header>
+
+  <div class="box">
+    <h2>重設密碼</h2>
+    <p style="font-size:14px;color:#666; text-align:center; margin-top:-6px;">
+      帳號：<b>{{ email }}</b>
+    </p>
+
+    <input type="hidden" id="token" value="{{ token }}"/>
+
+    <div class="input-group">
+      <label for="new_password">新密碼</label>
+      <input type="password" id="new_password" placeholder="請輸入新密碼"/>
+      <div class="hint">需包含英文字母大小寫與數字，長度 8~12 碼。</div>
+    </div>
+
+    <div class="input-group">
+      <label for="confirm_password">確認新密碼</label>
+      <input type="password" id="confirm_password" placeholder="請再次輸入新密碼"/>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn" onclick="submitReset()">確認變更</button>
+    </div>
+  </div>
+
+  <script>
+  function validPassword(pw){
+    const re=/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{8,12}$/;
+    return re.test(pw||"");
+  }
+  async function submitReset(){
+    const token=document.getElementById("token").value.trim();
+    const new_password=document.getElementById("new_password").value.trim();
+    const confirm_password=document.getElementById("confirm_password").value.trim();
+
+    if(!new_password||!confirm_password){ alert("請輸入新密碼與確認密碼"); return; }
+    if(new_password!==confirm_password){ alert("兩次輸入的密碼不一致"); return; }
+    if(!validPassword(new_password)){ alert("密碼需 8~12 碼，且包含大小寫字母與數字"); return; }
+
+    try{
+      const resp=await fetch('{{ url_for("auth.api_reset_password") }}',{
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body:JSON.stringify({ token, new_password, confirm_password })
+      });
+      const data=await resp.json();
+      if(!resp.ok||!data.ok){ alert(data.msg||"重設失敗"); return; }
+      alert("密碼已更新，請使用新密碼登入");
+      window.location.href="{{ url_for('auth.login_page') }}";
+    }catch(e){
+      console.error(e); alert("系統錯誤，請稍後再試");
+    }
+  }
+  </script>
+</body>
+</html>

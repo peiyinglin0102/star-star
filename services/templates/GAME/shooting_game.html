@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <title>太空射擊遊戲</title>
+  <style>
+    :root{ --back-top:16px; --back-left:16px; }
+
+    body {
+      margin: 0;
+      overflow: hidden;
+      background-color: #000;
+      font-family: Arial, sans-serif;
+      user-select: none;
+    }
+    #game-container {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      background-image: url('/static/game/spacebackground.png');
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      overflow: hidden;
+    }
+
+    /* 通用返回鈕（固定左上，會自動避位） */
+    #back-button{
+      position: fixed;
+      top: calc(env(safe-area-inset-top, 0px) + var(--back-top));
+      left: calc(env(safe-area-inset-left, 0px) + var(--back-left));
+      z-index: 10000;
+      display:inline-flex;align-items:center;gap:8px;
+      font-size: 16px; line-height:1;
+      color:#fff;
+      background-color: rgba(0,0,0,0.55);
+      padding: 10px 16px;
+      border-radius: 24px;
+      text-decoration: none;
+      box-shadow: 0 4px 12px rgba(0,0,0,.25);
+      transition: background-color .2s, transform .06s ease-in-out;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    #back-button:hover{ background-color: rgba(0,0,0,0.7); }
+    #back-button:active{ transform: scale(.98); }
+
+    #score {
+      position: absolute;
+      top: 50px;
+      left: 10px;
+      font-size: 24px;
+      color: white;
+      background-color: rgba(0, 0, 0, 0.5);
+      padding: 5px 15px;
+      border-radius: 20px;
+      z-index: 100;
+    }
+    #timer {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      font-size: 24px;
+      color: white;
+      background-color: rgba(0, 0, 0, 0.5);
+      padding: 5px 15px;
+      border-radius: 20px;
+    }
+    #ammo-display {
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      font-size: 24px;
+      color: white;
+      background-color: rgba(0, 0, 0, 0.5);
+      padding: 5px 15px;
+      border-radius: 20px;
+    }
+    #player {
+      position: absolute;
+      bottom: -60px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 250px;
+      height: 250px;
+      background-image: url('/static/game/spaceplayer.png');
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+      z-index: 10;
+    }
+    .enemy {
+      position: absolute;
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+      z-index: 5;
+    }
+    .bullet {
+      position: absolute;
+      width: 100px;
+      height: 100px;
+      background-image: url('/static/game/bullet.png');
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+      transform: translateX(-40%);
+      z-index: 8;
+    }
+    .explosion {
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background-color: #ff9900;
+      animation: explode 0.5s forwards;
+      z-index: 9;
+    }
+    @keyframes explode {
+      0% { transform: scale(0.5); opacity: 1; }
+      50% { transform: scale(1.5); opacity: 0.8; }
+      100% { transform: scale(2); opacity: 0; }
+    }
+    #crosshair {
+      position: absolute;
+      width: 30px;
+      height: 30px;
+      pointer-events: none;
+      z-index: 100;
+      display: none;
+    }
+    #crosshair::before, #crosshair::after {
+      content: '';
+      position: absolute;
+      background-color: red;
+    }
+    #crosshair::before {
+      top: 50%;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      transform: translateY(-50%);
+    }
+    #crosshair::after {
+      left: 50%;
+      top: 0;
+      width: 2px;
+      height: 100%;
+      transform: translateX(-50%);
+    }
+    #crosshair-dot {
+      position: absolute;
+      width: 6px;
+      height: 6px;
+      background-color: red;
+      border-radius: 50%;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+    #start-screen, #end-screen {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background-color: rgba(0, 0, 0, 0.7);
+      z-index: 100;
+    }
+    #end-screen { display: none; }
+    #start-button, #restart-button {
+      padding: 15px 30px;
+      font-size: 24px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      margin-top: 20px;
+    }
+    #start-button:hover, #restart-button:hover { background-color: #45a049; }
+    h1 {
+      color: white;
+      font-size: 48px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    .star {
+      position: absolute;
+      width: 2px;
+      height: 2px;
+      background-color: white;
+      border-radius: 50%;
+    }
+    @keyframes twinkle { 0% { opacity: .3; } 100% { opacity: 1; } }
+    #weapon {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 30px;
+      height: 30px;
+      z-index: 15;
+      transition: left 0.1s ease-out;
+    }
+    .laser-beam {
+      position: absolute;
+      width: 3px;
+      background-color: #ff0000;
+      transform-origin: top center;
+      z-index: 7;
+    }
+  </style>
+</head>
+<body data-logout-url="{{ url_for('auth.logout') }}">
+  <script src="{{ url_for('static', filename='js/parent_timer.js') }}?v=20251025-6"></script>
+  <div id="game-container">
+    <!-- 返回首頁（優先上一頁，否則回首頁） -->
+    <a href="{{ url_for('auth.home') }}" id="back-button" aria-label="返回首頁">← 返回首頁</a>
+
+    <div id="score">分數: 0</div>
+    <div id="timer">時間: 30</div>
+    <div id="ammo-display">彈藥: 10</div>
+    <div id="player"></div>
+    <div id="weapon"></div>
+    <div id="crosshair"><div id="crosshair-dot"></div></div>
+
+    <div id="start-screen">
+      <h1>太空射擊遊戲</h1>
+      <p style="color: white; font-size: 20px; margin-bottom: 30px;">
+        使用滑鼠移動射擊隕石！<br>
+        準心會跟隨你的滑鼠移動，你有 30 秒的時間！！<br>
+        注意：你的彈藥有限，每 1 秒會自動補充 5 發！<br>
+      </p>
+      <button id="start-button">開始遊戲</button>
+    </div>
+
+    <div id="end-screen">
+      <h1>遊戲結束！</h1>
+      <p id="final-score" style="color: white; font-size: 24px; margin-bottom: 30px;">你的得分: 0</p>
+      <button id="restart-button">再玩一次</button>
+    </div>
+  </div>
+  <!-- 全站倒數提醒容器（60s / 30s / 5s 用） -->
+<div id="sysCenterWarn" class="sysset-center-warn" aria-hidden="true">
+  <div class="sysset-center-box" id="sysCenterWarnBox"></div>
+</div>
+  <script>
+    // —— 返回邏輯（同網域上一頁；否則回首頁）+ 自動避位 —— //
+    (function(){
+      const backBtn = document.getElementById('back-button');
+      backBtn.addEventListener('click', function(e){
+        try{
+          const ref = document.referrer;
+          if(ref){
+            const r = new URL(ref);
+            if(r.origin === location.origin){
+              e.preventDefault();
+              history.back();
+              return;
+            }
+          }
+        }catch(_e){}
+      });
+
+      function avoidOverlap(){
+        document.documentElement.style.setProperty('--back-left','16px');
+        document.documentElement.style.setProperty('--back-top','16px');
+
+        const rect = backBtn.getBoundingClientRect();
+        let step = 8, shifted = 0, maxShift = 240;
+
+        function covered(){
+          const pts = [
+            [rect.left + 4, rect.top + 4],
+            [rect.left + rect.width/2, rect.top + rect.height/2]
+          ];
+          return pts.some(([x,y])=>{
+            const el = document.elementFromPoint(x,y);
+            return el && el !== backBtn && !backBtn.contains(el) && el !== document.body && el !== document.documentElement;
+          });
+        }
+        while(covered() && shifted <= maxShift){
+          shifted += step;
+          document.documentElement.style.setProperty('--back-left', (16 + shifted) + 'px');
+          const r2 = backBtn.getBoundingClientRect();
+          rect.left = r2.left; rect.top = r2.top; rect.width = r2.width; rect.height = r2.height;
+        }
+      }
+      window.addEventListener('load', ()=> setTimeout(avoidOverlap, 0));
+      window.addEventListener('resize', ()=> setTimeout(avoidOverlap, 0));
+    })();
+
+    // —— 遊戲主程式 —— //
+    const gameContainer = document.getElementById('game-container');
+    const scoreDisplay = document.getElementById('score');
+    const timerDisplay = document.getElementById('timer');
+    const ammoDisplay = document.getElementById('ammo-display');
+    const startScreen = document.getElementById('start-screen');
+    const endScreen = document.getElementById('end-screen');
+    const startButton = document.getElementById('start-button');
+    const restartButton = document.getElementById('restart-button');
+    const finalScoreDisplay = document.getElementById('final-score');
+    const player = document.getElementById('player');
+    const weapon = document.getElementById('weapon');
+    const crosshair = document.getElementById('crosshair');
+
+    let score = 0;
+    let timer = 30;
+    let ammo = 10;
+    let enemyInterval;
+    let timerInterval;
+    let ammoInterval;
+    let isGameRunning = false;
+    let mouseX = window.innerWidth / 2;
+    let mouseY = window.innerHeight / 2;
+    let stars = [];
+
+    function createStars() {
+      stars.forEach(star => { if (star.parentNode === gameContainer) star.remove(); });
+      stars = [];
+      for (let i = 0; i < 150; i++) {
+        const star = document.createElement('div');
+        star.className = 'star';
+        star.style.left = `${Math.random() * 100}%`;
+        star.style.top = `${Math.random() * 100}%`;
+        star.style.width = `${Math.random() * 3 + 1}px`;
+        star.style.height = star.style.width;
+        star.style.opacity = Math.random();
+        if (Math.random() > 0.7) star.style.animation = `twinkle ${Math.random() * 3 + 1}s infinite alternate`;
+        gameContainer.appendChild(star);
+        stars.push(star);
+      }
+    }
+
+    // 玩家位置更新：用 rAF 持續貼齊滑鼠 X
+    function updatePlayerLoop() {
+      if (!isGameRunning) return;
+      const maxX = window.innerWidth - 60; // 火箭寬度估計
+      const boundedX = Math.max(0, Math.min(mouseX - 30, maxX));
+      player.style.left = `${boundedX}px`;
+      requestAnimationFrame(updatePlayerLoop);
+    }
+
+    function updateCrosshair() {
+      if (!isGameRunning) return;
+      crosshair.style.left = `${mouseX - 15}px`;
+      crosshair.style.top = `${mouseY - 15}px`;
+    }
+
+    function shoot() {
+      if (!isGameRunning || ammo <= 0) return;
+
+      ammo--;
+      ammoDisplay.textContent = `彈藥: ${ammo}`;
+
+      const bullet = document.createElement('div');
+      bullet.className = 'bullet';
+
+      const playerRect = player.getBoundingClientRect();
+      const startX = playerRect.left + playerRect.width / 2;
+      const startY = playerRect.top;
+
+      bullet.style.left = `${startX - 2.5}px`;
+      bullet.style.top = `${startY}px`;
+      gameContainer.appendChild(bullet);
+
+      const bulletSpeed = 15;
+      const bulletTimer = setInterval(() => {
+        if (!isGameRunning) {
+          clearInterval(bulletTimer); bullet.remove(); return;
+        }
+        const currentTop = parseFloat(bullet.style.top);
+        bullet.style.top = `${currentTop - bulletSpeed}px`;
+        if (currentTop < 0) { clearInterval(bulletTimer); bullet.remove(); }
+
+        const enemies = document.querySelectorAll('.enemy');
+        const bulletRect = bullet.getBoundingClientRect();
+        for (const enemy of enemies) {
+          const enemyRect = enemy.getBoundingClientRect();
+          if (
+            bulletRect.left < enemyRect.right &&
+            bulletRect.right > enemyRect.left &&
+            bulletRect.top < enemyRect.bottom &&
+            bulletRect.bottom > enemyRect.top
+          ) {
+            clearInterval(bulletTimer);
+            const explosion = document.createElement('div');
+            explosion.className = 'explosion';
+            explosion.style.left = `${enemyRect.left}px`;
+            explosion.style.top = `${enemyRect.top}px`;
+            gameContainer.appendChild(explosion);
+            setTimeout(() => explosion.remove(), 500);
+            score += 10; scoreDisplay.textContent = `分數: ${score}`;
+            enemy.remove(); bullet.remove(); return;
+          }
+        }
+      }, 16);
+    }
+
+    function createEnemy() {
+      if (!isGameRunning) return;
+      const enemy = document.createElement('div');
+      enemy.className = 'enemy';
+      const meteorTypes = [
+        { img: '/static/game/enemy-06.png', size: 60 },
+        { img: '/static/game/enemy-07.png', size: 90 },
+        { img: '/static/game/enemy-08.png', size: 120 },
+        { img: '/static/game/enemy-09.png', size: 150 }
+
+      ];
+      const selected = meteorTypes[Math.floor(Math.random() * meteorTypes.length)];
+
+      enemy.style.width = `${selected.size}px`;
+      enemy.style.height = `${selected.size}px`;
+      enemy.style.backgroundImage = `url('${selected.img}')`;
+
+      const x = Math.random() * window.innerWidth;
+      const y = -selected.size;
+      enemy.style.left = `${x}px`;
+      enemy.style.top = `${y}px`;
+
+      gameContainer.appendChild(enemy);
+
+      const playerRect = player.getBoundingClientRect();
+      const playerCenterX = playerRect.left + playerRect.width / 2;
+      const playerCenterY = playerRect.top + playerRect.height / 2;
+
+      const dx = playerCenterX - x;
+      const dy = playerCenterY - y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      const speedFactor = Math.random() * 1 + 0.8;
+      const velocityX = (dx / distance) * speedFactor;
+      const velocityY = (dy / distance) * speedFactor;
+
+      const eTimer = setInterval(() => {
+        if (!isGameRunning) {
+          clearInterval(eTimer);
+          if (enemy.parentNode === gameContainer) enemy.remove();
+          return;
+        }
+
+        const currentLeft = parseFloat(enemy.style.left) || x;
+        const currentTop = parseFloat(enemy.style.top) || y;
+
+        enemy.style.left = `${currentLeft + velocityX}px`;
+        enemy.style.top = `${currentTop + velocityY}px`;
+
+        const enemyRect = enemy.getBoundingClientRect();
+        const currentPlayerRect = player.getBoundingClientRect();
+
+        if (
+          enemyRect.left < currentPlayerRect.right &&
+          enemyRect.right > currentPlayerRect.left &&
+          enemyRect.top < currentPlayerRect.bottom &&
+          enemyRect.bottom > currentPlayerRect.top
+        ) {
+          if (score > 0) { score -= 5; scoreDisplay.textContent = `分數: ${score}`; }
+          const explosion = document.createElement('div');
+          explosion.className = 'explosion';
+          explosion.style.left = `${enemyRect.left}px`;
+          explosion.style.top = `${enemyRect.top}px`;
+          gameContainer.appendChild(explosion);
+          setTimeout(() => { if (explosion.parentNode === gameContainer) explosion.remove(); }, 500);
+
+          clearInterval(eTimer);
+          if (enemy.parentNode === gameContainer) enemy.remove();
+          return;
+        }
+
+        if (currentTop > window.innerHeight + selected.size) {
+          clearInterval(eTimer);
+          if (enemy.parentNode === gameContainer) enemy.remove();
+        }
+      }, 16);
+    }
+
+    function startGame() {
+      score = 0; timer = 30; ammo = 10; isGameRunning = true;
+      scoreDisplay.textContent = `分數: ${score}`;
+      timerDisplay.textContent = `時間: ${timer}`;
+      ammoDisplay.textContent = `彈藥: ${ammo}`;
+
+      startScreen.style.display = 'none';
+      endScreen.style.display = 'none';
+      crosshair.style.display = 'block';
+      requestAnimationFrame(updatePlayerLoop);
+
+      createStars();
+      document.body.style.cursor = 'none';
+
+      for (let i = 0; i < 3; i++) createEnemy();
+      enemyInterval = setInterval(() => { createEnemy(); }, 500);
+
+      ammoInterval = setInterval(() => {
+        ammo = Math.min(ammo + 5, 20);
+        ammoDisplay.textContent = `彈藥: ${ammo}`;
+      }, 1000);
+
+      timerInterval = setInterval(() => {
+        timer--; timerDisplay.textContent = `時間: ${timer}`;
+        if (timer <= 0) endGame();
+      }, 1000);
+    }
+
+    function endGame() {
+      isGameRunning = false;
+      clearInterval(enemyInterval);
+      clearInterval(timerInterval);
+      clearInterval(ammoInterval);
+
+      document.querySelectorAll('.enemy,.bullet,.laser-beam').forEach(el=>el.remove());
+
+      document.body.style.cursor = 'auto';
+      crosshair.style.display = 'none';
+
+      finalScoreDisplay.textContent = `你的得分: ${score}`;
+      endScreen.style.display = 'flex';
+    }
+
+    // 事件
+    gameContainer.addEventListener('mousemove', (e) => {
+      mouseX = e.clientX; mouseY = e.clientY;
+      updateCrosshair();
+    });
+    gameContainer.addEventListener('click', shoot);
+    startButton.addEventListener('click', startGame);
+    restartButton.addEventListener('click', startGame);
+
+    window.addEventListener('resize', () => { if (isGameRunning) createStars(); });
+    window.addEventListener('load', () => { crosshair.style.display = 'none'; });
+  </script>
+</body>
+</html>

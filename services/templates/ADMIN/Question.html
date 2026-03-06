@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+ <meta charset="UTF-8" />
+ <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+ <title>題庫管理</title>
+ <link rel="stylesheet" href="{{ url_for('static', filename='css/site.css') }}">
+ <style>
+   * { box-sizing: border-box; }
+   :root{
+     --sb-bg:#1f2937; --sb-bg-hover:#374151; --sb-text:#e5e7eb; --sb-muted:#9ca3af;
+     --bg:#f2f2f2; --card:#ffffff; --muted:#8b8b8b; --line:#e8e8e8; --primary:#3b82f6;
+     --success:#16a34a; --warning:#f59e0b; --danger:#ef4444; --shadow:0 6px 18px rgba(0,0,0,.06); --radius:14px;
+   }
+   body { margin:0; font-family: "Arial","微軟正黑體",sans-serif; background:var(--bg); color:#111; }
+
+   /* ====== 左側欄（與 frontpage.html 完全一致） ====== */
+   .sidebar {
+     width:260px; background:var(--sb-bg); color:var(--sb-text);
+     height:100vh; padding:24px 16px;
+     position:fixed; display:flex; flex-direction:column;
+     box-shadow: 0 0 0 1px rgba(255,255,255,.04) inset, var(--shadow);
+     z-index: 10000;
+   }
+   .sidebar-scroll{ overflow-y:auto; overflow-x:hidden; padding-right:4px; padding-bottom:16px; flex:1; }
+   .admin-label{ text-align:center; font-weight:800; font-size:16px; letter-spacing:.5px; color:var(--sb-text); margin:12px 2px 18px; }
+   .section{ margin:10px 0 14px; padding-top:6px; border-top:1px solid rgba(255,255,255,.06); }
+   .section:first-of-type{ border-top:none; margin-top:4px; }
+   .section-label{ text-align:left; color:var(--sb-muted); font-weight:700; font-size:13px; letter-spacing:.6px; padding:6px 6px; margin-bottom:6px; user-select:none; }
+   .submenu{ display:flex; flex-direction:column; gap:8px; }
+   .submenu-link, .submenu-item{
+     display:flex; align-items:center; gap:10px; text-decoration:none; text-align:left;
+     padding:10px 12px; font-size:13px; border-radius:10px; color:var(--sb-text); background:transparent;
+     border:1px solid rgba(255,255,255,.12); transition:.15s;
+   }
+   .submenu-link:hover{ background:var(--sb-bg-hover); border-color:rgba(255,255,255,.18); }
+   .submenu-item{ opacity:.6; cursor:not-allowed; }
+   .menu-icon{ width:18px; height:18px; flex:0 0 18px; object-fit:cover; border-radius:4px; box-shadow:0 0 0 1px rgba(255,255,255,.25) inset; }
+   .submenu-link.is-active{ position: relative; background:#257beb; border-color:#257beb; color:#fff; box-shadow: inset 0 0 0 1px rgba(255,255,255,.12); }
+   .submenu-link.is-active::before{ content:""; position:absolute; left:-12px; top:8px; bottom:8px; width:4px; background:#3b82f6; border-radius:4px; }
+   .submenu-link.is-active:hover{ background:#1d4ed8; border-color:#1d4ed8; }
+   .sidebar-footer{ margin-top:auto; padding-top:14px; padding-bottom:6px; border-top:1px solid rgba(255,255,255,.06); }
+   .logout-button{
+     width:100%; margin:12px 0 6px; padding:9px 10px; border-radius:9px; font-size:13px; text-align:center;
+     background:rgba(239,68,68,.10); color:#ef4444; border:1px solid rgba(239,68,68,.35); cursor:pointer; transition:.15s;
+   }
+   .logout-button:hover{ background:rgba(239,68,68,.18); border-color:rgba(239,68,68,.5); }
+
+   /* 手機遮罩與漢堡鍵（與 frontpage 一致） */
+   .sb-scrim{ position: fixed; inset: 0; background: rgba(0,0,0,.35); opacity: 0; visibility: hidden; transition: opacity .2s ease; z-index: 9998; }
+   .sb-scrim.is-show{ opacity: 1; visibility: visible; }
+   .mobile-toggle{
+     position: fixed; top: max(10px, env(safe-area-inset-top,10px)); left: 12px; z-index: 10001;
+     background:#ffffff; color:#111; border:1px solid var(--line); border-radius:12px; padding:10px 14px; box-shadow:var(--shadow);
+     font-size:15px; line-height:1; display:none;
+   }
+
+   /* ====== 主內容（桌機：左側 260px） ====== */
+   .main { margin-left:260px; padding:40px 32px 60px; }
+
+   /* ====== 原 Question.html 样式（保留） ====== */
+   .main-header { text-align:center; margin-bottom:10px; }
+   .type-selector { display:flex; justify-content:center; gap:20px; margin:10px 0 6px; }
+   .type-button { padding:10px 20px; border:none; border-radius:20px; background-color:#eeeeee; font-size:16px; cursor:pointer; transition:background-color .3s, color .3s; }
+   .type-button.selected { background-color:#2196F3; color:#fff; }
+   .hint { text-align:center; color:#666; margin:6px 0 16px; }
+   .qs { display:none; }
+   .question-block { position:relative; background-color:#fff; border-radius:12px; padding:30px 25px; margin-bottom:30px; box-shadow:0 6px 15px rgba(0,0,0,.15); display:flex; flex-direction:column; gap:16px; }
+   .question-block label { color:#222; font-weight:700; margin-top:8px; margin-bottom:6px; display:block; border-bottom:2px solid #ddd; padding-bottom:4px; }
+   .question-block textarea, .question-block input[type="text"], .question-block select { width:100%; padding:10px; border:1px solid #ccc; border-radius:6px; font-size:14px; resize:vertical; margin-bottom:0; }
+   .question-block input[type="file"] { margin-top:8px; }
+   .preview { display:flex; gap:10px; flex-wrap:wrap; }
+   .block-close { position:absolute; top:10px; right:10px; border:none; background:#eee; border-radius:50%; width:28px; height:28px; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; font-weight:700; }
+   .block-close:hover { background:#e33; color:#fff; }
+
+   /* === 四顆按鈕單行 === */
+   .buttons-container{
+     display:flex; gap:20px; margin-top:20px; justify-content:center; align-items:center;
+     flex-wrap:nowrap; overflow-x:auto; -webkit-overflow-scrolling:touch; padding:8px 2px;
+   }
+   .buttons-container button{
+     padding:14px 28px; border:none; border-radius:24px; background-color:#4CAF50; color:#fff; font-size:18px;
+     cursor:pointer; transition:background-color .3s; min-width:160px; white-space:nowrap;
+   }
+   .buttons-container button:hover { background-color:#45a049; }
+   .add-question-button { background-color:#2196F3; }
+   .add-question-button:hover { background-color:#0b7dda; }
+
+   .choice-pills { display:flex; gap:10px; flex-wrap:wrap; }
+   .pill { padding:8px 14px; border:1px solid #bbb; border-radius:999px; cursor:pointer; user-select:none; }
+   .pill.selected { background:#2196F3; border-color:#2196F3; color:#fff; font-weight:700; }
+
+   .ai-row { display:flex; gap:14px; align-items:center; font-size:14px; color:#444; }
+   .badge { display:inline-block; padding:4px 10px; border-radius:999px; border:1px solid #bbb; }
+   .badge.ok { background:#e8f5e9; border-color:#66bb6a; color:#2e7d32; }
+   .badge.fail { background:#ffebee; border-color:#ef5350; color:#b71c1c; }
+   .muted { color:#777; }
+
+   .loading-overlay { position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(255,255,255,.8); display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:9999; font-size:20px; color:#333; }
+   .spinner { border:8px solid #f3f3f3; border-top:8px solid #4CAF50; border-radius:50%; width:60px; height:60px; animation:spin 1s linear infinite; margin-bottom:15px; }
+   @keyframes spin { 0%{transform:rotate(0)} 100%{transform:rotate(360deg)} }
+   .question-block.ai-fail{ border: 2px solid var(--danger); box-shadow: 0 0 0 3px rgba(239, 68, 68, .15), 0 10px 24px rgba(239, 68, 68, .35); }
+
+   /* ===== 角色選單：新增 ===== */
+   .role-panel{
+     max-width:1100px; margin: 8px auto 14px; background:var(--card); border-radius:12px; box-shadow:var(--shadow);
+     border:1px solid var(--line); padding:14px 16px;
+   }
+   .role-header{ font-weight:800; margin-bottom:8px; }
+   .role-pills{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+   .role-pill{
+     display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border-radius:999px;
+     border:1px solid #c9c9c9; background:#fff; cursor:pointer;
+   }
+   .role-pill.is-selected{ background:#eef4ff; border-color:#7aa2ff; }
+   .role-del{ border:none; background:#f6f6f6; padding:2px 6px; border-radius:8px; cursor:pointer; }
+   .role-del:hover{ background:#ffe5e5; }
+   .role-add{ display:flex; gap:8px; margin-top:10px; }
+   .role-add input{ flex:1; padding:8px 10px; border:1px solid #ccc; border-radius:8px; }
+   .role-add button{ padding:8px 12px; border:none; border-radius:10px; background:#2563eb; color:#fff; cursor:pointer; }
+   .role-hint{ font-size:12px; color:#666; margin-top:6px; }
+
+   /* ==== 角色管理：縮小版樣式覆蓋（不動功能） ==== */
+   .role-manager { 
+     --rm-font: 12px;
+     --rm-pad: 6px;
+     --rm-gap: 8px;
+     --rm-chip-font: 12px;
+     --rm-chip-pad-y: 4px;
+     --rm-chip-pad-x: 8px;
+     --rm-btn-font: 12px;
+     --rm-btn-pad-y: 4px;
+     --rm-btn-pad-x: 8px;
+     --rm-input-h: 28px;
+     --rm-radius: 8px;
+     --rm-muted: #6b7280;
+     font-size: var(--rm-font);
+   }
+   .role-manager .rm-title { font-size: 13px; margin: 0 0 8px 0; line-height: 1.2; color: #222; }
+   .role-manager .rm-toolbar { display: flex; align-items: center; gap: var(--rm-gap); margin-bottom: 8px; }
+   .role-manager .rm-input { height: var(--rm-input-h); padding: 0 10px; font-size: var(--rm-font); border: 1px solid #d1d5db; border-radius: var(--rm-radius); background: #fff; min-width: 160px; }
+   .role-manager .rm-btn { padding: var(--rm-btn-pad-y) var(--rm-btn-pad-x); font-size: var(--rm-btn-font); border-radius: var(--rm-radius); border: 1px solid #d1d5db; background: #f3f4f6; color: #111; cursor: pointer; transition: .15s; }
+   .role-manager .rm-btn:hover { background: #e5e7eb; }
+   .role-manager .role-list { display: flex; flex-wrap: wrap; gap: 6px; }
+   .role-manager .role-badge { display: inline-flex; align-items: center; gap: 6px; padding: var(--rm-chip-pad-y) var(--rm-chip-pad-x); font-size: var(--rm-chip-font); border: 1px solid #d1d5db; border-radius: 999px; background: #ffffff; }
+   .role-manager .role-badge .del { width: 16px; height: 16px; line-height: 14px; font-size: 11px; text-align: center; border-radius: 50%; border: 1px solid #d1d5db; background: #f9fafb; cursor: pointer; }
+   .role-manager .rm-hint { font-size: 11px; color: var(--rm-muted); margin-top: 4px; }
+   .role-manager .rm-inline { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+   @media (max-width: 768px){
+     .role-manager { --rm-font: 11px; --rm-input-h: 26px; }
+     .role-manager .rm-input { min-width: 140px; }
+     .role-manager .rm-title { font-size: 12px; }
+   }
+
+   /* ====== 新增：情境類別整批選擇（頂部） ====== */
+   .situ-cat-panel{ max-width:1100px; margin: 10px auto 14px; background:var(--card); border-radius:12px; box-shadow:var(--shadow); border:1px solid var(--line); padding:12px 16px; display:none; }
+   .situ-cat-title{ font-weight:800; margin-bottom:8px; }
+   .situ-cat-hint{ font-size:12px; color:#666; margin-top:6px; }
+   .situ-cat-badge{ display:inline-block; border:1px solid #bbb; border-radius:999px; padding:4px 10px; font-size:12px; background:#fafafa; }
+
+   /* ====== RWD ====== */
+   @media (max-width: 768px){
+     .buttons-container{ justify-content:space-between; gap:8px; flex-wrap:nowrap; overflow-x:visible; padding:8px 0; }
+     .buttons-container button{ flex:0 0 calc((100% - 3 * 8px)/4); min-width:auto; white-space:nowrap; padding:10px 0; font-size:14px; border-radius:18px; }
+     .main { margin-left: 0; padding: calc(60px + env(safe-area-inset-top,0px)) 16px 90px; }
+     .sidebar{ display:flex; flex-direction:column; transform: translateX(-105%); transition: transform .25s ease; width: 82vw; max-width: 340px; z-index: 9999; }
+     .sidebar.is-open{ transform: translateX(0); }
+     .sidebar-scroll{ overflow-y:auto; padding-right:4px; padding-bottom: calc(70px + env(safe-area-inset-bottom, 0px)); flex:1; }
+     .mobile-toggle{ display:inline-block; }
+   }
+   .ai-conf {
+  display: none !important;
+}
+ </style>
+</head>
+<body>
+ <!-- 手機遮罩與漢堡鍵 -->
+ <div class="sb-scrim" hidden></div>
+ <button class="mobile-toggle" type="button" style="display:none;">☰ 選單</button>
+
+ <!-- 側邊欄 -->
+ <div class="sidebar">
+   <div class="sidebar-scroll">
+     <div class="admin-label">管理員Admin</div>
+     <div class="section">
+       <div class="section-label">儀表板 ▾</div>
+       <div class="submenu">
+         <a class="submenu-link" href="{{ url_for('admin.frontpage') }}" data-page="/ADMIN/frontpage.html">數據總覽</a>
+       </div>
+     </div>
+     <div class="section">
+       <div class="section-label">用戶資訊 ▾</div>
+       <div class="submenu">
+         <a class="submenu-link" href="{{ url_for('admin.user_information') }}" data-page="/ADMIN/Userinformation.html">帳號管理</a>
+         <a class="submenu-link" href="{{ url_for('admin.page_answer_records') }}" data-page="/ADMIN/answer-records.html">答題紀錄</a>
+         <a class="submenu-link" href="{{ url_for('admin.add_user') }}" data-page="/ADMIN/add-user.html">自訂題目</a>
+       </div>
+     </div>
+     <div class="section">
+       <div class="section-label">題庫管理 ▾</div>
+       <div class="submenu">
+         <a class="submenu-link is-active" href="{{ url_for('ai.page_question') }}" data-page="/ADMIN/Question.html">上傳題目</a>
+         <a class="submenu-link" href="{{ url_for('ai.page_picture_question') }}" data-page="/ADMIN/Picture-question.html">圖片題庫</a>
+         <a class="submenu-link" href="{{ url_for('ai.page_gif_question') }}" data-page="/ADMIN/GIF-question.html">動圖題庫</a>
+         <a class="submenu-link" href="{{ url_for('ai.page_situation_question') }}" data-page="/ADMIN/Situation-question.html">情境題庫</a>
+       </div>
+     </div>
+     <div class="sidebar-footer">
+       <button class="logout-button" onclick="location.href='{{ url_for('admin.logout') }}'">登出帳戶</button>
+     </div>
+   </div>
+ </div>
+
+ <!-- 主內容 -->
+ <div class="main">
+   <div class="main-header"><h1>上傳題目</h1></div>
+
+
+
+   <div class="type-selector">
+     <button class="type-button" id="type-image" onclick="selectQuestionType('image')">圖片關卡</button>
+     <button class="type-button" id="type-gif" onclick="selectQuestionType('gif')">動畫關卡</button>
+     <button class="type-button" id="type-situation" onclick="selectQuestionType('situation')">情境關卡</button>
+   </div>
+   <div class="hint" id="current-hint"></div>
+   <!-- 角色選單：新增（僅圖片/動畫顯示） -->
+   <div id="role-panel" class="role-panel" aria-live="polite">
+     <div class="role-header">題幹角色（可增刪）</div>
+     <div id="role-pills" class="role-pills"></div>
+     <div class="role-add">
+       <input id="role-input" type="text" maxlength="6" placeholder="輸入角色，如：小朋友、阿姨" />
+       <button id="role-add-btn" type="button">新增角色</button>
+     </div>
+     <div class="role-hint">說明：開始辨識時會把選取的角色送到AI，以七成機率帶入題目句子。</div>
+   </div>
+   <!-- 新增：情境類別整批選擇（放到上面） -->
+   <div id="situ-cat-panel" class="situ-cat-panel" aria-live="polite" style="display:none;">
+     <div class="situ-cat-title">情境類別（整批套用）：</div>
+     <div id="situ-cat-pills" class="choice-pills"></div>
+     <div class="situ-cat-hint">提示：上傳的情境題都會套用上方所選類別，不需逐題選擇。</div>
+   </div>
+
+   <div id="questions-container">
+     <div id="qs-image" class="qs"></div>
+     <div id="qs-gif" class="qs"></div>
+     <div id="qs-situation" class="qs"></div>
+   </div>
+
+   <div class="buttons-container" style="justify-content: center;">
+     <button id="add-question" class="add-question-button" type="button">➕新增一題</button>
+     <button id="bulk-import" type="button">📥批次匯入</button>
+     <button id="ai-recognition" type="button">開始辨識</button>
+     <button id="finish-addition" type="button">完成新增</button>
+   </div>
+
+   <input id="bulk-file-picker" type="file" multiple style="display:none">
+ </div>
+
+ <script>
+   /* ====== RWD：手機漢堡開關 + 自動高亮（與 frontpage.html 一致） ====== */
+   (function(){
+     const sb = document.querySelector('.sidebar');
+     const mobileBtn = document.querySelector('.mobile-toggle');
+     const scrim = document.querySelector('.sb-scrim');
+     const mq = window.matchMedia('(max-width: 768px)');
+
+     const showToggle = ()=> { mobileBtn.style.display = mq.matches ? 'inline-block' : 'none'; };
+     const openSidebar = (open)=> {
+       if(open){ sb.classList.add('is-open'); if(scrim){ scrim.classList.add('is-show'); scrim.removeAttribute('hidden'); } }
+       else { sb.classList.remove('is-open'); if(scrim){ scrim.classList.remove('is-show'); scrim.setAttribute('hidden',''); } }
+     };
+
+     mq.addEventListener('change', ()=>{ showToggle(); if(!mq.matches){ openSidebar(false); }});
+     showToggle();
+
+     mobileBtn.addEventListener('click', (e)=>{ e.stopPropagation(); const willOpen = !sb.classList.contains('is-open'); openSidebar(willOpen); });
+     scrim?.addEventListener('click', ()=> openSidebar(false));
+     document.querySelector('.main')?.addEventListener('click', ()=> openSidebar(false));
+
+     const path = location.pathname;
+     document.querySelectorAll('.submenu-link').forEach(a=>{
+       const dp = a.getAttribute('data-page') || '';
+       const href = a.getAttribute('href') || '';
+       if( (dp && path.endsWith(dp)) || (href && href !== '#' && path === href) ){
+         a.classList.add('is-active');
+       }
+     });
+   })();
+ </script>
+
+ <!-- ====== 保留原 Question.html JS（加入情境類別整批選擇 + 角色選單 + 送後端微擴充） ====== -->
+ <script>
+  // ====== 共用 ======
+  const API_BASE = "/ai";
+  const AI_EMOS = ["生氣","厭惡","害怕","開心","難過","驚訝"];
+  const SITUATION_CATS_FALLBACK = ["社交規範","安全意識","生活習慣","身體覺察","情緒管理","禮貌表達"];
+
+  let selectedType = "image";
+
+  const qsImage = document.getElementById('qs-image');
+  const qsGif = document.getElementById('qs-gif');
+  const qsSituation = document.getElementById('qs-situation');
+  const hintEl = document.getElementById('current-hint');
+
+  const situPanel = document.getElementById('situ-cat-panel');
+  const situPillsWrap = document.getElementById('situ-cat-pills');
+  let selectedSituationCategory = '';
+
+  function typeLabel(t){ return t==='gif'?'動畫關卡':(t==='situation'?'情境關卡':'圖片關卡'); }
+  function currentBucket(){ return selectedType==='gif'?qsGif:(selectedType==='situation'?qsSituation:qsImage); }
+  function showBucket(type){
+    qsImage.style.display='none'; qsGif.style.display='none'; qsSituation.style.display='none';
+    if(type==='gif') qsGif.style.display='block';
+    else if(type==='situation') qsSituation.style.display='block';
+    else qsImage.style.display='block';
+    hintEl.textContent = `目前編輯：${typeLabel(type)}（切換只顯示該類別的內容）`;
+  }
+
+  // ===== 角色管理（原功能保留） =====
+  const rolePanel = document.getElementById('role-panel');
+  const rolePills = document.getElementById('role-pills');
+  const roleInput = document.getElementById('role-input');
+  const roleAddBtn = document.getElementById('role-add-btn');
+
+  const DEFAULT_ROLES = ["小朋友","哥哥","姊姊","爸爸","媽媽","爺爺","奶奶","叔叔","阿姨","老師","同學","朋友","男生","女生","孩子"];
+  let roles = []; let selectedRole = "";
+
+  function loadRoles(){
+    try{ const raw = localStorage.getItem('admin_roles'); roles = raw ? JSON.parse(raw) : DEFAULT_ROLES.slice(); }
+    catch(e){ roles = DEFAULT_ROLES.slice(); }
+    if(!Array.isArray(roles) || !roles.length){ roles = DEFAULT_ROLES.slice(); }
+    selectedRole = localStorage.getItem('admin_roles_selected') || roles[0] || "";
+    renderRoles();
+  }
+  function saveRoles(){ try{ localStorage.setItem('admin_roles', JSON.stringify(roles)); }catch(e){} }
+  function setSelectedRole(r){ selectedRole = r || ""; try{ localStorage.setItem('admin_roles_selected', selectedRole); }catch(e){} renderRoles(); }
+  function addRole(){
+    const v = (roleInput.value || "").trim();
+    if(!v){ alert("請輸入角色名稱"); return; }
+    if(v.length > 6){ alert("角色不宜超過6個字"); return; }
+    if(roles.includes(v)){ alert("清單已存在此角色"); return; }
+    roles.push(v); saveRoles(); roleInput.value = ""; setSelectedRole(v);
+  }
+  function delRole(r){ const idx = roles.indexOf(r); if(idx < 0) return; roles.splice(idx,1); saveRoles(); if(selectedRole === r){ setSelectedRole(roles[0] || ""); } renderRoles(); }
+  function renderRoles(){
+    rolePills.innerHTML = "";
+    roles.forEach(r=>{
+      const pill = document.createElement('div');
+      pill.className = 'role-pill' + (selectedRole===r?' is-selected':'');
+      pill.innerHTML = `<span>${r}</span> <button type="button" class="role-del" title="刪除">✕</button>`;
+      pill.addEventListener('click', (e)=>{ if(e.target && e.target.classList.contains('role-del')) return; setSelectedRole(r); });
+      pill.querySelector('.role-del').addEventListener('click', (e)=>{ e.stopPropagation(); if(confirm(`要刪除「${r}」嗎？`)) delRole(r); });
+      rolePills.appendChild(pill);
+    });
+  }
+  roleAddBtn.addEventListener('click', addRole);
+  loadRoles();
+
+  // ===== 新增：從後端取得「情境」類別清單（失敗則用預設） =====
+  async function loadSituCategories(){
+    let names = [];
+    try{
+      const res = await fetch(`${API_BASE}/api/category/list?group=situation`);
+      const data = await res.json();
+      if(Array.isArray(data) && data.length){ names = data.map(x=>x.c_name).filter(Boolean); }
+    }catch(e){ /* ignore，走 fallback */ }
+    if(!names.length){ names = SITUATION_CATS_FALLBACK.slice(); }
+    renderSituCatPills(names);
+  }
+
+  function renderSituCatPills(names){
+    situPillsWrap.innerHTML = '';
+    names.forEach(name=>{
+      const div = document.createElement('div');
+      div.className = 'pill' + (name===selectedSituationCategory?' selected':'');
+      div.textContent = name;
+      div.dataset.cat = name;
+      div.addEventListener('click', ()=>{
+        selectedSituationCategory = name;
+        document.querySelectorAll('#situ-cat-pills .pill').forEach(p=>p.classList.remove('selected'));
+        div.classList.add('selected');
+        // 同步既有情境題區塊的顯示/資料
+        propagateSituCatToBlocks();
+      });
+      situPillsWrap.appendChild(div);
+    });
+    if(!selectedSituationCategory && names.length){
+      selectedSituationCategory = names[0];
+      const first = situPillsWrap.querySelector('.pill');
+      first && first.classList.add('selected');
+    }
+    propagateSituCatToBlocks();
+  }
+
+  function propagateSituCatToBlocks(){
+    const blocks = Array.from(qsSituation.querySelectorAll('.question-block'));
+    blocks.forEach(b=>{
+      b.dataset.categoryName = selectedSituationCategory || '';
+      const tag = b.querySelector('.situ-cat-readonly');
+      if(tag){ tag.textContent = selectedSituationCategory || '未分類'; }
+    });
+  }
+
+  function createQuestionBlock(index){
+    const type = selectedType;
+    const block = document.createElement('div');
+    block.className = 'question-block';
+
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'block-close';
+    closeBtn.type = 'button';
+    closeBtn.title = '刪除此題';
+    closeBtn.textContent = '✖';
+    closeBtn.addEventListener('click', () => handleDeleteBlock(block));
+    block.appendChild(closeBtn);
+
+    if (type === 'situation') {
+      block.insertAdjacentHTML('beforeend', `
+        <label class="q-label" for="question-${type}-${index}">題目 ${index + 1}：</label>
+        <textarea id="question-${type}-${index}" rows="3" placeholder="請輸入題目內容"></textarea>
+
+        <!-- 移除逐題選類別；改為『頂部整批選擇』，這裡只顯示目前類別（唯讀標籤） -->
+        <div><span class="muted">目前套用類別：</span> <span class="situ-cat-badge situ-cat-readonly">${selectedSituationCategory || '未分類'}</span> <small class="muted">（點上方類別切換）</small></div>
+
+        <label>設定答案（點選其一）：</label>
+        <div class="choice-pills situ-ans">
+          <div class="pill" data-val="正確">正確</div>
+          <div class="pill" data-val="錯誤">錯誤</div>
+        </div>
+
+        <label for="upload-${type}-${index}">上傳影像（圖片或影片）：</label>
+        <input type="file" id="upload-${type}-${index}" accept="image/*,video/*" />
+        <div class="preview" id="preview-${type}-${index}"></div>
+      `);
+
+      // 初始化：把整批選到的類別寫進 block dataset
+      block.dataset.categoryName = selectedSituationCategory || '';
+
+      const ansPills = block.querySelectorAll('.situ-ans .pill');
+      ansPills.forEach(p=>{
+        p.addEventListener('click', ()=>{
+          ansPills.forEach(x=>x.classList.remove('selected'));
+          p.classList.add('selected');
+          block.dataset.answer = p.dataset.val;
+        });
+      });
+
+      const fileInput = block.querySelector(`#upload-${type}-${index}`);
+      const previewDiv = block.querySelector(`#preview-${type}-${index}`);
+      fileInput.addEventListener('change', ()=>{
+        previewDiv.innerHTML = '';
+        const f = fileInput.files?.[0];
+        if(!f) return;
+        previewMedia(previewDiv, f);
+      });
+
+    } else {
+      block.insertAdjacentHTML('beforeend', `
+        <label class="q-label" for="question-${type}-${index}">題目 ${index + 1}：</label>
+        <textarea id="question-${type}-${index}" rows="3" placeholder="請輸入題目內容"></textarea>
+
+        <label for="answer-${type}-${index}">答案（六大情緒）：</label>
+        <select id="answer-${type}-${index}">
+          <option value="" selected disabled>請選擇</option>
+          ${AI_EMOS.map(e => `<option value="${e}">${e}</option>`).join('')}
+        </select>
+
+        <div class="ai-row">
+          <span class="badge ai-status">未辨識</span>
+          <span class="ai-conf muted">信心值：0/100</span>
+        </div>
+
+        <label for="upload-${type}-${index}">上傳圖片：</label>
+        <input type="file" id="upload-${type}-${index}" accept="image/*" />
+        <div class="preview" id="preview-${type}-${index}"></div>
+      `);
+
+      const fileInput = block.querySelector(`#upload-${type}-${index}`);
+      const previewDiv = block.querySelector(`#preview-${type}-${index}`);
+      fileInput.addEventListener('change', ()=>{
+        previewDiv.innerHTML = '';
+        const f = fileInput.files?.[0];
+        if(!f || !f.type.startsWith('image/')) return;
+        previewMedia(previewDiv, f);
+      });
+    }
+    return block;
+  }
+
+  function previewMedia(previewDiv, file){
+    const url = URL.createObjectURL(file);
+    if (file.type.startsWith('video/')){
+      const v = document.createElement('video');
+      v.src = url; v.controls = true; v.style.maxWidth = '260px'; v.style.borderRadius = '8px';
+      previewDiv.appendChild(v);
+    } else if (file.type.startsWith('image/')){
+      const img = document.createElement('img');
+      img.src = url; img.style.maxWidth = '180px'; img.style.borderRadius = '8px';
+      img.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
+      previewDiv.appendChild(img);
+    }
+  }
+
+  function handleDeleteBlock(block){
+    const type = selectedType;
+    const { isBlank } = peekBlock(block, type);
+    if (!isBlank){
+      const ok = confirm('這題已有輸入，確定要刪除嗎？');
+      if (!ok) return;
+    }
+    block.parentElement.removeChild(block);
+    renumberBlocks(currentBucket());
+  }
+  function renumberBlocks(bucket){
+    const labels = bucket.querySelectorAll('.question-block .q-label');
+    labels.forEach((lab,i)=> lab.textContent = `題目 ${i+1}：`);
+  }
+  function addQuestion(){
+    const bucket = currentBucket();
+    const index = bucket.children.length;
+    const block = createQuestionBlock(index);
+    bucket.appendChild(block);
+    renumberBlocks(bucket);
+  }
+  document.getElementById('add-question').addEventListener('click', addQuestion);
+
+  // ====== 批次匯入（保留原功能） ======
+  const bulkPicker = document.getElementById('bulk-file-picker');
+  document.getElementById('bulk-import').addEventListener('click', ()=>{
+    bulkPicker.accept = (selectedType === 'situation') ? 'image/*,video/*' : 'image/*';
+    bulkPicker.value = '';
+    bulkPicker.click();
+  });
+  bulkPicker.addEventListener('change', ()=>{
+    const files = Array.from(bulkPicker.files || []);
+    if (!files.length) return;
+
+    const bucket = currentBucket();
+    let skipped = 0;
+
+    const allBlocks = Array.from(bucket.querySelectorAll('.question-block'));
+    const blanks = allBlocks.filter(b => peekBlock(b, selectedType).isBlank);
+    let blankPtr = 0;
+
+    files.forEach(file=>{
+      if (selectedType === 'situation'){
+        if (!(file.type.startsWith('image/') || file.type.startsWith('video/'))){ skipped++; return; }
+      } else {
+        if (!file.type.startsWith('image/')){ skipped++; return; }
+      }
+
+      let block;
+      if (blankPtr < blanks.length){
+        block = blanks[blankPtr++];
+      } else {
+        const index = bucket.children.length;
+        block = createQuestionBlock(index);
+        bucket.appendChild(block);
+      }
+
+      block._pickedFile = file;
+      const previewDiv = block.querySelector('.preview');
+      if (previewDiv){
+        previewDiv.innerHTML = '';
+        previewMedia(previewDiv, file);
+      }
+
+      // 確保類別跟隨整批選擇
+      if(selectedType==='situation'){
+        block.dataset.categoryName = selectedSituationCategory || '';
+        const tag = block.querySelector('.situ-cat-readonly');
+        if(tag) tag.textContent = selectedSituationCategory || '未分類';
+      }
+    });
+
+    renumberBlocks(bucket);
+    if (skipped){ alert(`有 ${skipped} 個檔案類型與目前題型不相容，已略過。`); }
+  });
+
+  function getBlockFile(b){
+    return b.querySelector('input[type="file"]')?.files?.[0] || b._pickedFile || null;
+  }
+
+  // ===== 切換題型（加入角色面板/情境類別面板顯示控制） =====
+  function selectQuestionType(type){
+    selectedType = type;
+    document.querySelectorAll('.type-button').forEach(btn=>btn.classList.remove('selected'));
+    const selectedButton = document.getElementById('type-'+type);
+    if (selectedButton) selectedButton.classList.add('selected');
+
+    const aiBtn = document.getElementById('ai-recognition');
+    aiBtn.style.display = (type === 'situation') ? 'none' : 'inline-block';
+
+    // 角色面板：情境題不顯示
+    rolePanel.style.display = (type === 'situation') ? 'none' : 'block';
+
+    // 情境類別整批選擇：僅在情境題顯示
+    if (type === 'situation'){
+      situPanel.style.display = 'block';
+      if(!situPillsWrap.children.length){ loadSituCategories(); }
+    } else {
+      situPanel.style.display = 'none';
+    }
+
+    showBucket(type);
+    const bucket = currentBucket();
+    if (!bucket.children.length) addQuestion();
+    else renumberBlocks(bucket);
+  }
+
+  function score100(v){ let x=Number(v||0); if(x<=1) x*=100; x=Math.round(Math.max(0,Math.min(100,x))); return x; }
+  // ✅ 修改：AI 辨識後不顯示信心值
+  function setAiStatus(block,{ok,msg,confidence}){
+    const st = block.querySelector('.ai-status');
+    const cf = block.querySelector('.ai-conf');
+    if(!st || !cf) return;
+    st.classList.remove('ok','fail');
+    if(ok){
+      st.classList.add('ok');
+      st.textContent = msg || 'AI 已辨識';
+    } else {
+      st.classList.add('fail');
+      st.textContent = msg || '辨識失敗，請人工選擇';
+    }
+    // 🚫 移除信心值顯示（僅清空文字，不刪元素）
+    cf.textContent = '';
+  }
+
+  async function runAIRecognition(){
+    const overlay = makeOverlay('辨識中，請稍等...');
+    try{
+      const bucket=currentBucket();
+      const blocks = Array.from(bucket.querySelectorAll('.question-block'));
+      if(!blocks.length){ alert('請先新增一題'); return; }
+
+      const fd = new FormData();
+      const sTypeMap = { image:'圖片', gif:'動圖' };
+      fd.append('s_type', sTypeMap[selectedType] || '圖片');
+
+      // 把選取角色傳給後端（可不選）
+      if (selectedRole) { fd.append('role', selectedRole); }
+
+      const blocksWithFile=[];
+      blocks.forEach(b=>{
+        const f=getBlockFile(b);
+        if(f){ fd.append('files[]',f,f.name); blocksWithFile.push(b); }
+      });
+      if(!blocksWithFile.length){ alert('請先選擇至少一張圖片再進行 AI 辨識。'); return; }
+
+      const res=await fetch(`${API_BASE}/api/recognize`,{ method:'POST', body:fd });
+      const data=await res.json();
+      if(!res.ok) throw new Error(data?.error || `辨識失敗（HTTP ${res.status}）`);
+
+      blocksWithFile.forEach((b,i)=>{
+        const q = b.querySelector('textarea');
+        const sel = b.querySelector('select');
+        const item = data[i]; if(!item) return;
+
+        const fallback = (selectedType==='gif') ? '動畫裡的小朋友什麼情緒？' : '圖片裡的小朋友什麼情緒？';
+        let incomingQ = (item.question_text || '');
+        if (/AI\s*失敗/.test(incomingQ)) incomingQ = '';
+        if (!q.value.trim()) { q.value = incomingQ || fallback; }
+
+        const conf = score100(item.confidence??0);
+        if (sel){
+          if (item.answer && ["生氣","厭惡","害怕","開心","難過","驚訝"].includes(item.answer)){
+            sel.value = item.answer;
+            setAiStatus(b,{ok:true,msg:`AI 已辨識：${item.answer}`,confidence:conf});
+            b.classList.remove('ai-fail');
+          } else {
+            sel.value = "";
+            setAiStatus(b,{ok:false,msg:'辨識失敗，請人工選擇',confidence:0});
+            b.classList.add('ai-fail');
+          }
+        }
+
+        b.dataset.aiMediaUrl = item.media_url || '';
+        b.dataset.aiLabel     = item.raw_label || '';
+        b.dataset.aiConfidence= String(conf);
+      });
+
+      alert('AI 辨識完成。');
+    }catch(e){
+      alert(`AI 辨識失敗：${e.message||e}`);
+    }finally{
+      removeOverlay(overlay);
+    }
+  }
+
+  function peekBlock(block,type){
+    const text=(block.querySelector('textarea')?.value||'').trim();
+    const file=getBlockFile(block);
+    const mediaUrl=block.dataset.aiMediaUrl||block.dataset.mediaUrl||'';
+    const hasMedia=!!file||!!mediaUrl;
+
+    if(type==='situation'){
+      const answer=block.dataset.answer||'';
+      // 類別改為整批控制（從全域 selectedSituationCategory 或 block.dataset 取）
+      const category = selectedSituationCategory || block.dataset.categoryName || '';
+      // 完整判斷：不再要求逐題選類別，只要整批有選且每題有題幹/答案/媒體即可
+      const isBlank=!text && !answer && !hasMedia;
+      const isPartial=!isBlank && (!text || !answer || !hasMedia || !category);
+      const isComplete=!isBlank && !isPartial;
+      return { isBlank,isPartial,isComplete,text,answer,category,hasMedia,mediaUrl,file };
+    }else{
+      const selVal=(block.querySelector('select')?.value||'').trim();
+      const isBlank=!text&&!selVal&&!hasMedia;
+      const isPartial=!isBlank && (!text||!selVal||!hasMedia);
+      const isComplete=!isBlank && !isPartial;
+      return { isBlank,isPartial,isComplete,text,selVal,hasMedia,mediaUrl,file };
+    }
+  }
+
+  async function uploadMissingMediaFor(blocks){
+    const need=[];
+    blocks.forEach(b=>{
+      const hasUrl=!!b.dataset.aiMediaUrl || !!b.dataset.mediaUrl;
+      const f=getBlockFile(b);
+      if(!hasUrl && f) need.push({ block:b, file:f });
+    });
+    if(!need.length) return;
+
+    const fd=new FormData();
+    need.forEach(n=>fd.append('files[]',n.file,n.file.name));
+
+    const res=await fetch(`${API_BASE}/api/upload`,{ method:'POST', body:fd });
+    const data=await res.json();
+    if(!res.ok) throw new Error(data?.error || `上傳失敗（HTTP ${res.status}）`);
+    if(!Array.isArray(data) || data.length!==need.length) throw new Error('上傳回傳數量不符。');
+
+    data.forEach((it,idx)=>{ need[idx].block.dataset.mediaUrl = it.media_url || ''; });
+  }
+
+  async function submitQuestions(){
+    const bucket=currentBucket();
+    const blocks=Array.from(bucket.querySelectorAll('.question-block'));
+    if(!blocks.length){ alert('請先新增題目'); return; }
+
+    // 情境題：要求整批類別必選
+    if(selectedType==='situation' && !selectedSituationCategory){
+      alert('請先在上方選擇一個「情境類別」。');
+      return;
+    }
+
+    const overlay = makeOverlay('資料送出中...');
+    try{
+      const toSend=[];
+      for(let i=0;i<blocks.length;i++){
+        const b=blocks[i];
+        const state=peekBlock(b,selectedType);
+        if(state.isBlank) continue;
+        if(state.isPartial){ alert(`第 ${i+1} 題尚未填完，請補齊或按右上角 ✖ 刪除。`); removeOverlay(overlay); return; }
+        toSend.push(b);
+      }
+      if(!toSend.length){ alert('沒有任何有效的題目可儲存。'); removeOverlay(overlay); return; }
+
+      await uploadMissingMediaFor(toSend);
+
+      const items=toSend.map(b=>{
+        const qtext=b.querySelector('textarea').value.trim();
+        const mediaUrl=b.dataset.aiMediaUrl || b.dataset.mediaUrl || '';
+        if(selectedType==='situation'){
+          const answer=b.dataset.answer || '';
+          // 類別取整批選擇
+          const category_name= selectedSituationCategory || b.dataset.categoryName || '未分類';
+          return { question_text:qtext, answer, media_url:mediaUrl, category_name };
+        }else{
+          const answer=b.querySelector('select').value.trim();
+          return { question_text:qtext, answer, media_url:mediaUrl };
+        }
+      });
+
+      const sTypeMap={ image:'圖片', gif:'動圖', situation:'情境' };
+      const payload={ target:'system', s_type:sTypeMap[selectedType] || '圖片', admin_id:1, items };
+      // 情境題：把整批類別一併傳上去，後端會優先用 item.category 或整批名稱
+      if(selectedType==='situation'){
+        payload.s_category_name = selectedSituationCategory;
+      }
+
+      const res=await fetch(`${API_BASE}/api/save`,{
+        method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)
+      });
+      const data=await res.json();
+      if(!res.ok || !data.ok) throw new Error(data?.error || `HTTP ${res.status}`);
+
+      alert(`已儲存 ${data.saved} 題到系統題庫！`);
+      resetFormToInitial();
+    }catch(e){
+      alert(`儲存失敗：${e.message||e}`);
+    }finally{
+      removeOverlay(overlay);
+    }
+  }
+
+  function resetFormToInitial(){
+    qsImage.innerHTML = '';
+    qsGif.innerHTML = '';
+    qsSituation.innerHTML = '';
+    // 保留最近一次選的情境類別於 local state（不清空 selectedSituationCategory）
+    selectQuestionType('image');
+    window.scrollTo({ top:0, behavior:'smooth' });
+  }
+
+  function makeOverlay(text){
+    const ov=document.createElement('div');
+    ov.className='loading-overlay';
+    ov.innerHTML=`<div class="spinner"></div><div>${text||''}</div>`;
+    document.body.appendChild(ov);
+    return ov;
+  }
+  function removeOverlay(ov){ if(ov && ov.parentNode) ov.parentNode.removeChild(ov); }
+
+  document.getElementById('add-question').addEventListener('click', addQuestion);
+  document.getElementById('ai-recognition').addEventListener('click', runAIRecognition);
+  document.getElementById('finish-addition').addEventListener('click', submitQuestions);
+
+  window.addEventListener('load', ()=>{ selectQuestionType('image'); });
+ </script>
+</body>
+</html>

@@ -1,0 +1,125 @@
+<!DOCTYPE html> 
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>星星的世界</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body, html { height: 100%; width: 100%; font-family: "微軟正黑體", sans-serif; overflow: hidden; position: relative; }
+
+    /* === 電腦版 === */
+    .slide { display: none; position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background-size: cover; background-position: center; z-index: 0; }
+    .slide.active { display: block; }
+
+    .overlay-content {
+      position: absolute; top: 50%; left: 75%;
+      transform: translate(-50%, -50%);
+      text-align: center; z-index: 1; color: #fff;
+    }
+
+    .btn {
+      background-color: #eee; border: none;
+      padding: 12px 30px; margin: 20px;
+      font-size: 25px; border-radius: 10px;
+      cursor: pointer; transition: background-color 0.2s;
+    }
+    .btn:hover { background-color: #ddd; }
+
+    .admin-link {
+      position: absolute; bottom: 20px; right: 20px;
+      font-size: 14px; color: black; text-decoration: none;
+      z-index: 2;
+    }
+
+    .dots {
+      position: absolute; bottom: 20px; left: 50%;
+      transform: translateX(-50%);
+      display: flex; gap: 8px; z-index: 2;
+    }
+    .dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      background-color: #aaa; cursor: pointer;
+    }
+    .dot.active { background-color: #333; }
+
+    /* === 手機版 === */
+    @media (max-width: 768px) {
+      body {
+        background-image: url('{{ url_for('static', filename='phone1.jpg') }}');
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+        overflow: hidden;
+      }
+
+      /* 隱藏電腦輪播 */
+      .slide, .dots { display: none !important; }
+
+      /* 手機版登入框置中 */
+      .overlay-content {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: #000;
+      }
+
+      .btn {
+        background-color: rgba(227, 227, 227, 0.8);
+        font-size: 20px;
+        padding: 10px 25px;
+        border-radius: 12px;
+        margin: 10px;
+      }
+
+      /* 管理員登入移到底部中央 */
+      .admin-link {
+        bottom: 30px;
+        right: 50%;
+        transform: translateX(50%);
+        color: #333;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- 電腦版輪播背景 -->
+  <div class="slide active" style="background-image: url('{{ url_for('static', filename='1.png') }}');"></div>
+  <div class="slide" style="background-image: url('{{ url_for('static', filename='2.png') }}');"></div>
+  <div class="slide" style="background-image: url('{{ url_for('static', filename='3.png') }}');"></div>
+
+  <!-- 登入與註冊 -->
+  <div class="overlay-content">
+    <button class="btn" onclick="location.href='{{ url_for('auth.login_page') }}'">星星登入</button>
+    <button class="btn" onclick="location.href='{{ url_for('auth.register_page') }}'">星星註冊</button>
+  </div>
+
+  <!-- 管理員登入 -->
+  <a class="admin-link" href="{{ url_for('admin.login_page') }}">管理員登入</a>
+
+  <!-- 輪播圓點 -->
+  <div class="dots">
+    <div class="dot active" onclick="goToSlide(0)"></div>
+    <div class="dot" onclick="goToSlide(1)"></div>
+    <div class="dot" onclick="goToSlide(2)"></div>
+  </div>
+
+  <script>
+    let index = 0;
+    const slides = document.querySelectorAll(".slide");
+    const dots = document.querySelectorAll(".dot");
+
+    function showSlide(i) {
+      slides.forEach((s, idx) => {
+        s.classList.toggle("active", idx === i);
+        dots[idx].classList.toggle("active", idx === i);
+      });
+      index = i;
+    }
+    function nextSlide() { index = (index + 1) % slides.length; showSlide(index); }
+    function goToSlide(i) { showSlide(i); }
+    setInterval(nextSlide, 4000);
+  </script>
+</body>
+</html>

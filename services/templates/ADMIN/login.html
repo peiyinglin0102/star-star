@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>管理員登入｜星星的世界</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    :root{
+      /* 與數據頁一致的設計語彙 */
+      --sb-bg:#1f2937; --sb-bg-hover:#374151; --sb-text:#e5e7eb; --sb-muted:#9ca3af;
+      --bg:#f2f2f2; --card:#ffffff; --muted:#8b8b8b; --line:#e8e8e8; --primary:#3b82f6;
+      --success:#16a34a; --warning:#f59e0b; --danger:#ef4444;
+      --shadow:0 6px 18px rgba(0,0,0,.06); --radius:16px;
+    }
+
+    body{
+      margin:0; font-family:"Noto Sans TC","微軟正黑體",sans-serif; color:#111; background:var(--bg);
+      min-height:100vh; display:flex; flex-direction:column;
+    }
+
+    /* 頂部列：與數據頁的灰白玻璃感一致 */
+    .header{
+      height:66px; display:flex; align-items:center; padding:0 20px;
+      background:#ffffffcc; backdrop-filter: blur(6px);
+      box-shadow:0 2px 8px rgba(0,0,0,.05);
+      position:sticky; top:0; z-index:10;
+    }
+    .logo{
+      font-size:24px; font-weight:800; color:#111; text-decoration:none; letter-spacing:.5px;
+      font-family:'ZCOOL KuaiLe', cursive; transition:transform .15s ease;
+    }
+    .logo:hover{ transform:translateY(-1px); }
+
+    /* 內容容器 */
+    .container{
+      flex:1; display:flex; justify-content:center; align-items:center; padding:36px 16px;
+    }
+
+    /* 登入卡片：沿用卡片語彙（白底、邊框、陰影、圓角） */
+    .login-card{
+      width:100%; max-width:420px; background:var(--card);
+      border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow);
+      padding:28px 26px 26px; animation:fadeIn .35s ease;
+    }
+    .login-title{
+      font-size:22px; font-weight:900; text-align:center; margin:6px 0 18px;
+    }
+
+    .input-box{ margin-bottom:14px; }
+    .label{ font-size:13px; color:#555; margin-bottom:6px; display:block; }
+
+    input[type="text"], input[type="password"]{
+      width:100%; padding:12px 14px; font-size:16px; border-radius:12px;
+      border:1px solid var(--line); background:#fafafa; transition:.15s;
+    }
+    input[type="text"]:focus, input[type="password"]:focus{
+      outline:none; border-color:var(--primary); background:#fff;
+      box-shadow:0 0 0 3px rgba(59,130,246,.12);
+    }
+
+    .login-button{
+      appearance:none; width:100%; border:none; cursor:pointer;
+      margin-top:8px; padding:12px 0; border-radius:12px; font-size:16px; font-weight:700;
+      background:var(--primary); color:#fff; box-shadow:var(--shadow); transition:.15s;
+    }
+    .login-button:hover{ background:#1d4ed8; transform:translateY(-1px); box-shadow:0 10px 22px rgba(59,130,246,.22); }
+    .login-button:active{ transform:none; }
+
+    .error{
+      color:#b91c1c; background: #fee2e2; border:1px solid #fecaca;
+      font-size:14px; border-radius:10px; padding:8px 10px; margin-top:12px; min-height:20px;
+    }
+
+    /* 補充：底部資訊與 RWD */
+    footer{ text-align:center; font-size:13px; color:#666; padding:18px 0 24px; }
+
+    /* 裝飾性網格背景（淡淡的，維持專業感） */
+    .bg-grid{
+      position:fixed; inset:0; z-index:-1;
+      background-image:
+        linear-gradient(to right, rgba(0,0,0,.03) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(0,0,0,.03) 1px, transparent 1px);
+      background-size: 24px 24px;
+    }
+    /* 取代原本的 .error 區塊 */
+.error{
+  display:none;                /* 預設不顯示 */
+  color:#b91c1c;
+  background:#fee2e2;
+  border:1px solid #fecaca;
+  font-size:14px;
+  border-radius:10px;
+  padding:8px 10px;
+  margin-top:12px;
+}
+.error.is-visible{ display:block; }  /* 有錯誤才顯示 */
+
+    @keyframes fadeIn{ from{opacity:.0; transform:translateY(8px);} to{opacity:1; transform:none;} }
+
+    /* RWD：小螢幕間距與字級微調，確保不擋到 */
+    @media (max-width: 768px){
+      .header{ height:auto; padding:12px 16px; }
+      .logo{ font-size:22px; }
+      .container{ padding:24px 14px; }
+      .login-card{ padding:22px 18px; border-radius:14px; }
+      .login-title{ font-size:20px; margin-bottom:16px; }
+      input[type="text"], input[type="password"]{ font-size:16px; padding:12px 13px; }
+      .login-button{ font-size:16px; padding:12px; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="bg-grid" aria-hidden="true"></div>
+
+  <div class="header">
+    <a href="{{ url_for('index') }}" class="logo" aria-label="返回首頁">星星的世界</a>
+  </div>
+
+  <div class="container">
+    <div class="login-card" role="form" aria-labelledby="title">
+      <h1 class="login-title" id="title">管理員登入</h1>
+
+      <div class="input-box">
+        <label for="username" class="label">帳號</label>
+        <input type="text" id="username" placeholder="請輸入帳號" autocomplete="username" />
+      </div>
+
+      <div class="input-box">
+        <label for="password" class="label">密碼</label>
+        <input type="password" id="password" placeholder="請輸入密碼" autocomplete="current-password" />
+      </div>
+
+      <button class="login-button" onclick="handleLogin()" aria-label="登入">登入</button>
+      <div class="error" id="error-message" role="alert" aria-live="polite"></div>
+    </div>
+  </div>
+
+  <footer>© 2025 星星的世界管理系統｜Admin Portal</footer>
+
+  <script>
+  /* ✅ 串接不變：完全沿用你的原本邏輯 */
+  async function handleLogin() {
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value;
+    const errBox = document.getElementById('error-message');
+    errBox.textContent = '';
+    errBox.classList.remove('is-visible');   // 先隱藏
+
+    try {
+      const resp = await fetch('{{ url_for("admin.api_login") }}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ username, password })
+      });
+
+      let data;
+      try {
+        data = await resp.json();
+      } catch {
+        throw new Error('伺服器回應非 JSON，請檢查 Network 面板。');
+      }
+
+      if (!resp.ok || !data.ok) {
+        errBox.textContent = (data && data.msg) ? data.msg : '登入失敗，請確認帳號密碼';
+        errBox.classList.add('is-visible');    // 有訊息才顯示
+        return;
+      }
+
+      window.location.href = data.redirect || '{{ url_for("admin.frontpage") }}';
+    } catch (e) {
+      console.error(e);
+      errBox.textContent = e.message || '系統錯誤，請稍後再試';
+       errBox.classList.add('is-visible');    // 有訊息才顯示
+    }
+  }
+  </script>
+</body>
+</html>

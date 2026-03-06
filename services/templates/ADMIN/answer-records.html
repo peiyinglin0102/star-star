@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>答題紀錄｜管理員介面</title>
+  <style>
+    * { box-sizing: border-box; }
+    :root{
+      --sb-bg:#1f2937; --sb-bg-hover:#374151; --sb-text:#e5e7eb; --sb-muted:#9ca3af;
+      --bg:#f2f2f2; --card:#ffffff; --muted:#8b8b8b; --line:#e8e8e8; --primary:#3b82f6;
+      --shadow:0 6px 18px rgba(0,0,0,.06); --radius:14px;
+    }
+    body { margin:0; font-family: "Arial","微軟正黑體",sans-serif; background-color: var(--bg); color:#111; }
+
+    /* ====== 與 frontpage.html 相同的側欄樣式 ====== */
+    .sidebar {
+      width:260px; background:var(--sb-bg); color:var(--sb-text);
+      height:100vh; padding:24px 16px;
+      position:fixed; display:flex; flex-direction:column;
+      box-shadow: 0 0 0 1px rgba(255,255,255,.04) inset, var(--shadow);
+      z-index: 9999;
+    }
+    .sidebar-scroll{
+      overflow-y:auto; overflow-x:hidden; padding-right:4px;
+      padding-bottom:16px; flex:1;
+    }
+    .admin-label{
+      text-align:center; font-weight:800;
+      font-size:16px; letter-spacing:.5px; color:var(--sb-text);
+      margin:12px 2px 18px;
+    }
+    .section{ margin:10px 0 14px; padding-top:6px; border-top:1px solid rgba(255,255,255,.06); }
+    .section:first-of-type{ border-top:none; margin-top:4px; }
+    .section-label{
+      text-align:left; color:var(--sb-muted); font-weight:700; font-size:13px; letter-spacing:.6px;
+      padding:6px 6px; margin-bottom:6px; user-select:none;
+    }
+    .submenu{ display:flex; flex-direction:column; gap:8px; }
+    .submenu-link, .submenu-item{
+      display:flex; align-items:center; gap:10px;
+      text-decoration:none; text-align:left;
+      padding:10px 12px; font-size:13px; border-radius:10px;
+      color:var(--sb-text); background:transparent;
+      border:1px solid rgba(255,255,255,.12); transition:.15s;
+    }
+    .submenu-link:hover{ background:var(--sb-bg-hover); border-color:rgba(255,255,255,.18); }
+    .submenu-item{ opacity:.6; cursor:not-allowed; }
+    .menu-icon{ width:18px; height:18px; flex:0 0 18px; object-fit:cover; border-radius:4px; box-shadow:0 0 0 1px rgba(255,255,255,.25) inset; }
+    .submenu-link.is-active{
+      position: relative; background:#257beb; border-color:#257beb; color:#fff;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.12);
+    }
+    .submenu-link.is-active::before{
+      content:""; position:absolute; left:-12px; top:8px; bottom:8px; width:4px;
+      background:#3b82f6; border-radius:4px;
+    }
+    .submenu-link.is-active:hover{ background:#1d4ed8; border-color:#1d4ed8; }
+    .sidebar-footer{ margin-top:auto; padding-top:14px; padding-bottom:6px; border-top:1px solid rgba(255,255,255,.06); }
+    .logout-button{
+      width:100%; margin:12px 0 6px; padding:9px 10px; border-radius:9px; font-size:13px;
+      text-align:center; background:rgba(239,68,68,.10); color:#ef4444;
+      border:1px solid rgba(239,68,68,.35); cursor:pointer; transition:.15s;
+    }
+    .logout-button:hover{ background:rgba(239,68,68,.18); border-color:rgba(239,68,68,.5); }
+
+    /* ===== 右側內容（保持原本串接與版型） ===== */
+    .main { margin-left:260px; padding:28px 32px 60px; }
+    .title{ font-size:28px; font-weight:900; margin:0 0 16px; }
+    .toolbar{ display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:12px; }
+    .search{ flex:0 1 420px; display:flex; align-items:center; gap:8px; border:1px solid var(--line); border-radius:999px; padding:10px 14px; background:#fff; }
+    .search input{ border:none; outline:none; flex:1; font-size:14px; }
+
+    .card{ background:var(--card); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px; }
+    table{ width:100%; border-collapse:collapse; }
+    thead th{ font-weight:700; color:#374151; text-align:left; font-size:14px; padding:14px 12px; border-bottom:1px solid var(--line); background:#fafafa; }
+    tbody td{ padding:16px 12px; border-bottom:1px solid var(--line); vertical-align:middle; }
+
+    .user-cell{ display:flex; align-items:center; gap:12px }
+    .avatar{ width:40px; height:40px; border-radius:50%; object-fit:cover; background:#f3f4f6 }
+    .name{ font-weight:700 }
+    .email{ font-size:12px; color:#6b7280 }
+    .muted{ color:#9ca3af }
+    .btn-link{ color:#2563eb; background:transparent; border:none; font-weight:700; cursor:pointer }
+    .empty{ padding:36px 10px; text-align:center; color:#9ca3af }
+
+    /* ====== Modal（保持不變） ====== */
+    .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:center;justify-content:center;z-index:10000}
+    .modal{width:min(1000px,96vw);max-height:86vh;overflow:auto;background:#fff;border-radius:14px;box-shadow:var(--shadow);border:1px solid var(--line)}
+    .modal header{position:sticky;top:0;background:#fff;padding:16px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+    .modal .body{padding:12px 18px 20px}
+    .close-x{border:none;background:transparent;font-size:20px;cursor:pointer}
+    .subtle{color:#6b7280;font-size:13px}
+    .t{width:100%;border-collapse:collapse}
+    .t th,.t td{padding:12px;border-bottom:1px solid var(--line);text-align:left}
+    .pill{display:inline-block;padding:2px 8px;border-radius:999px;background:#eef2ff}
+    .ok{color:#059669}.no{color:#dc2626}
+    .thumb{width:72px;height:48px;object-fit:cover;background:#f3f4f6;border-radius:8px}
+    .thumb-wrap{ position:relative; width:72px; height:48px; border-radius:8px; overflow:hidden; background:#f3f4f6 }
+    .thumb-wrap .play{ position:absolute; inset:auto 0 0 0; margin:auto; width:0; height:0; border-left:10px solid #fff; border-top:7px solid transparent; border-bottom:7px solid transparent; opacity:.9; left:28px; top:17px; }
+    .thumb-wrap .badge{ position:absolute; right:6px; top:6px; font-size:10px; background:rgba(0,0,0,.55); color:#fff; padding:2px 4px; border-radius:6px }
+    .thumb-video{ width:72px; height:48px; object-fit:cover; display:block; }
+
+    /* ====== 與 frontpage.html 相同的手機 RWD（抽屜 + 遮罩 + 主區 padding） ====== */
+    @media (max-width: 768px) {
+      .main {
+        margin-left: 0;
+        padding: calc(60px + env(safe-area-inset-top,0px)) 16px 90px; /* 上：漢堡鍵高度；下：預留工具列空間 */
+      }
+      .sidebar{
+        transform: translateX(-105%);
+        transition: transform .25s ease;
+        width: 82vw; max-width: 340px;
+      }
+      .sidebar.is-open{ transform: translateX(0); }
+        .sidebar{ display:flex; flex-direction:column; }
+
+  /* 可捲動區：多留底部空間，避免被黏底的 footer 蓋住 */
+  .sidebar-scroll{
+    overflow-y:auto; 
+    padding-right:4px;
+    padding-bottom: calc(70px + env(safe-area-inset-bottom, 0px)); /* ⬅ 重要 */
+    flex:1;
+  }
+
+
+      .mobile-toggle{
+        position: fixed;
+        top: max(10px, env(safe-area-inset-top,10px));
+        left: 12px; z-index: 10001;
+        background:#ffffff; color:#111;
+        border:1px solid var(--line); border-radius:12px;
+        padding:10px 14px; box-shadow:var(--shadow);
+        font-size:15px; line-height:1;
+      }
+      .sb-scrim{
+        position: fixed; inset: 0;
+        background: rgba(0,0,0,.35);
+        opacity: 0; visibility: hidden;
+        transition: opacity .2s ease;
+        z-index: 9998;
+      }
+      .sb-scrim.is-show{ opacity: 1; visibility: visible; }
+
+      /* 1) 表格容器可左右捲動，避免被壓到直排 */
+  .card{ overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+  /* 2) 給表格最小寬度，確保欄位不會被擠得太窄 */
+  table{ min-width: 720px; }
+
+  /* 3) 蓋掉 thead 內聯寬度，重新分配比例（手機用） */
+  thead th:nth-child(1){ width:auto !important; }      /* 用戶 */
+  thead th:nth-child(2){ width:210px !important; }     /* 最近作答時間 */
+  thead th:nth-child(3){ width:90px  !important; }     /* 回合總數 */
+  thead th:nth-child(4){ width:120px !important; text-align:center; } /* 操作 */
+
+  /* 4) 不要換行：時間、回合數、操作都維持單行 */
+  tbody td:nth-child(2),
+  tbody td:nth-child(3),
+  tbody td:nth-child(4){ white-space: nowrap; }
+
+  /* 5) 讓「詳細情形」維持一行顯示，不再被切成直排 */
+  .btn-link{
+    display: inline-block;
+    white-space: nowrap;
+    padding: 8px 10px;
+    line-height: 1.1;
+  }
+
+  /* 6) 中文避免一字一行；Email 太長用省略號 */
+  table, thead th, tbody td{ word-break: keep-all; } /* CJK 不隨意斷字 */
+  .email{
+    display:block;
+    max-width: 260px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* 7) 工具列與搜尋欄在窄螢幕更好排版 */
+  .toolbar{ flex-wrap: wrap; }
+  .search{ flex: 1 1 100%; }
+
+  /* 8) 微調字級與內距 */
+  thead th, tbody td{ padding:12px 10px; font-size:14px; }
+  .title{ font-size:24px; }
+  .card{ padding:14px; }
+}
+  </style>
+</head>
+<body>
+
+  <!-- 與 frontpage.html 一致的：遮罩 + 漢堡鍵 -->
+  <div class="sb-scrim" hidden></div>
+  <button class="mobile-toggle" type="button" style="display:none;">☰ 選單</button>
+
+  <!-- 與 frontpage.html 一致的側邊欄 -->
+  <div class="sidebar">
+    <div class="sidebar-scroll">
+      <div class="admin-label">管理員Admin</div>
+
+      <!-- 儀表板 -->
+      <div class="section">
+        <div class="section-label">儀表板 ▾</div>
+        <div class="submenu">
+          <a class="submenu-link" href="{{ url_for('admin.frontpage') }}" data-page="/ADMIN/frontpage.html">數據總覽</a>
+        </div>
+      </div>
+
+      <!-- 用戶資訊 -->
+      <div class="section">
+        <div class="section-label">用戶資訊 ▾</div>
+        <div class="submenu">
+          <a class="submenu-link" href="{{ url_for('admin.user_information') }}" data-page="/ADMIN/Userinformation.html">帳號管理</a>
+          <a class="submenu-link" href="{{ url_for('admin.page_answer_records') }}" data-page="/ADMIN/answer-records.html">答題紀錄</a>
+          <a class="submenu-link" href="{{ url_for('admin.add_user') }}" data-page="/ADMIN/add-user.html">自訂題目</a>
+        </div>
+      </div>
+
+      <!-- 題庫管理 -->
+      <div class="section">
+        <div class="section-label">題庫管理 ▾</div>
+        <div class="submenu">
+          <a class="submenu-link" href="{{ url_for('ai.page_question') }}" data-page="/ADMIN/Question.html">上傳題目</a>
+          <a class="submenu-link" href="{{ url_for('ai.page_picture_question') }}" data-page="/ADMIN/Picture-question.html">圖片題庫</a>
+          <a class="submenu-link" href="{{ url_for('ai.page_gif_question') }}" data-page="/ADMIN/GIF-question.html">動圖題庫</a>
+          <a class="submenu-link" href="{{ url_for('ai.page_situation_question') }}" data-page="/ADMIN/Situation-question.html">情境題庫</a>
+        </div>
+      </div>
+
+      <!-- 登出 -->
+      <div class="sidebar-footer">
+        <button class="logout-button" onclick="location.href='{{ url_for('admin.logout') }}'">登出帳戶</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 右側內容（原本串接維持） -->
+  <div class="main">
+    <div class="title">答題紀錄</div>
+
+    <div class="card">
+      <div class="toolbar">
+        <div class="search">
+          <span>🔍</span>
+          <input id="kw" type="search" placeholder="搜尋姓名或 Email…">
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th style="width:44%">用戶</th>
+            <th style="width:24%">最近作答時間</th>
+            <th style="width:18%">回合總數</th>
+            <th style="width:14%">操作</th>
+          </tr>
+        </thead>
+        <tbody id="rows">
+          <tr><td colspan="4" class="empty">載入中…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 使用者回合清單 Modal -->
+  <div id="mdlUser" class="modal-backdrop">
+    <div class="modal">
+      <header>
+        <div>
+          <div id="mdlUserTitle" style="font-weight:800">使用者回合清單</div>
+          <div id="mdlUserSub" class="subtle"></div>
+        </div>
+        <button class="close-x" onclick="closeUser()">✕</button>
+      </header>
+      <div class="body">
+        <table class="t">
+          <thead>
+            <tr>
+              <th style="width:12%">回合</th>
+              <th style="width:16%">答對題數</th>
+              <th style="width:16%">答對率</th>
+              <th style="width:28%">作答日期</th>
+              <th style="width:18%">操作</th>
+            </tr>
+          </thead>
+          <tbody id="userSessRows">
+            <tr><td colspan="5" class="empty">載入中…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 回合單題明細 Modal -->
+  <div id="mdlRound" class="modal-backdrop">
+    <div class="modal" style="width:min(1100px,96vw)">
+      <header>
+        <div>
+          <div id="mdlRoundTitle" style="font-weight:800">回合單題明細</div>
+          <div id="mdlRoundSub" class="subtle"></div>
+        </div>
+        <button class="close-x" onclick="closeRound()">✕</button>
+      </header>
+      <div class="body">
+        <div id="roundSummary" style="display:flex;gap:16px;margin:4px 0 12px">
+          <span class="pill">本回合題數：<b id="sumTotal">0</b></span>
+          <span class="pill">答對數：<b id="sumCorrect">0</b></span>
+          <span class="pill">答對率：<b id="sumAcc">0%</b></span>
+        </div>
+        <table class="t">
+          <thead>
+            <tr>
+              <th style="width:8%">題數</th>
+              <th style="width:14%">縮圖</th>
+              <th>題目</th>
+              <th style="width:14%">你的答案</th>
+              <th style="width:14%">正解</th>
+              <th style="width:10%">對錯</th>
+            </tr>
+          </thead>
+          <tbody id="roundItemRows">
+            <tr><td colspan="6" class="empty">載入中…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+<script>
+  /* ====== 與 frontpage.html 相同：手機漢堡開關 + 遮罩 + 自動高亮 ====== */
+  (function(){
+    const sb = document.querySelector('.sidebar');
+    const mobileBtn = document.querySelector('.mobile-toggle');
+    const scrim = document.querySelector('.sb-scrim');
+    const mq = window.matchMedia('(max-width: 768px)');
+
+    const showToggle = ()=> { mobileBtn.style.display = mq.matches ? 'inline-block' : 'none'; };
+    const openSidebar = (open)=> {
+      if(open){
+        sb.classList.add('is-open');
+        if(scrim){ scrim.classList.add('is-show'); scrim.removeAttribute('hidden'); }
+      }else{
+        sb.classList.remove('is-open');
+        if(scrim){ scrim.classList.remove('is-show'); scrim.setAttribute('hidden',''); }
+      }
+    };
+
+    mq.addEventListener('change', ()=>{ showToggle(); if(!mq.matches){ openSidebar(false); }});
+    showToggle();
+
+    mobileBtn.addEventListener('click', (e)=>{ e.stopPropagation(); const willOpen = !sb.classList.contains('is-open'); openSidebar(willOpen); });
+    scrim?.addEventListener('click', ()=> openSidebar(false));
+    document.querySelector('.main')?.addEventListener('click', ()=> openSidebar(false));
+
+    // 自動高亮：比對 pathname 與 data-page
+    const path = location.pathname;
+    document.querySelectorAll('.submenu-link').forEach(a=>{
+      const dp = a.getAttribute('data-page') || '';
+      const href = a.getAttribute('href') || '';
+      if( (dp && path.endsWith(dp)) || (href && href !== '#' && path === href) ){
+        a.classList.add('is-active');
+      }
+    });
+  })();
+
+  /* ====== 下面是原本的資料與渲染（不動） ====== */
+  const rowsEl = document.getElementById('rows');
+  const kwEl   = document.getElementById('kw');
+  let all = [];
+
+  async function load(){
+    rowsEl.innerHTML = `<tr><td colspan="4" class="empty">載入中…</td></tr>`;
+    try{
+      const r = await fetch("{{ url_for('admin.api_answer_records') }}", {cache:'no-store'});
+      const j = await r.json();
+      all = (j && j.ok && Array.isArray(j.data)) ? j.data : [];
+      render();
+    }catch(err){
+      console.error(err);
+      rowsEl.innerHTML = `<tr><td colspan="4" class="empty">讀取失敗</td></tr>`;
+    }
+  }
+
+  function render(){
+    const kw = (kwEl.value || '').trim().toLowerCase();
+    const list = all.filter(x=>{
+      if(!kw) return true;
+      return (x.name||'').toLowerCase().includes(kw) || (x.email||'').toLowerCase().includes(kw);
+    });
+
+    if(list.length === 0){
+      rowsEl.innerHTML = `<tr><td colspan="4" class="empty">沒有符合條件的資料</td></tr>`;
+      return;
+    }
+
+    rowsEl.innerHTML = list.map(x=>{
+      const avatar = x.avatar ? `<img class="avatar" src="${x.avatar}" alt="">` : `<div class="avatar"></div>`;
+      const last   = x.last_start_time ? x.last_start_time : `<span class="muted">—</span>`;
+      return `
+        <tr>
+          <td>
+            <div class="user-cell">
+              ${avatar}
+              <div>
+                <div class="name">${x.name || '(未命名)'}</div>
+                <div class="email">${x.email || ''}</div>
+              </div>
+            </div>
+          </td>
+          <td>${last}</td>
+          <td>${x.rounds}</td>
+          <td><button class="btn-link" onclick="openUserSessions(${x.user_id}, '${(x.name||'').replace(/'/g,"\\'")}', '${(x.email||'').replace(/'/g,"\\'")}')">詳細情形</button></td>
+        </tr>`;
+    }).join('');
+  }
+
+  const mdlUser = document.getElementById('mdlUser');
+  const mdlRound = document.getElementById('mdlRound');
+  const userSessRows = document.getElementById('userSessRows');
+  const roundItemRows = document.getElementById('roundItemRows');
+
+  function openUserSessions(user_id, name, email){
+    document.getElementById('mdlUserTitle').textContent = name || '(未命名)';
+    document.getElementById('mdlUserSub').textContent = email || '';
+    userSessRows.innerHTML = `<tr><td colspan="5" class="empty">載入中…</td></tr>`;
+    mdlUser.style.display='flex';
+    fetch(`{{ url_for('admin.api_admin_user_sessions', user_id=0) }}`.replace('/0','/'+user_id), {cache:'no-store'})
+      .then(r=>r.json())
+      .then(j=>{
+        const rows = Array.isArray(j.rows)? j.rows : [];
+        if(rows.length===0){
+          userSessRows.innerHTML = `<tr><td colspan="5" class="empty">沒有回合</td></tr>`;
+          return;
+        }
+        userSessRows.innerHTML = rows.map(r=>{
+          const when = r.start_time ? r.start_time.replace('T',' ') : '';
+          return `<tr>
+            <td>${r.round_no}</td>
+            <td>${r.correct_cnt}/${r.answered_cnt}</td>
+            <td>${r.accuracy_pct}%</td>
+            <td>${when}</td>
+            <td><button class="btn-link" onclick="openRound(${r.ss_id}, ${r.round_no})">查看詳情</button></td>
+          </tr>`;
+        }).join('');
+      })
+      .catch(()=>userSessRows.innerHTML=`<tr><td colspan="5" class="empty">讀取失敗</td></tr>`);
+  }
+  function closeUser(){ mdlUser.style.display='none'; }
+
+  function openRound(ss_id, round_no){
+    document.getElementById('mdlRoundTitle').textContent = `回合單題明細（第 ${round_no} 回）`;
+    document.getElementById('mdlRoundSub').textContent = '';
+    roundItemRows.innerHTML = `<tr><td colspan="6" class="empty">載入中…</td></tr>`;
+    mdlRound.style.display='flex';
+    fetch(`{{ url_for('admin.api_admin_session_items', ss_id=0) }}`.replace('/0','/'+ss_id), {cache:'no-store'})
+      .then(r=>r.json())
+      .then(j=>{
+        const items = Array.isArray(j.items)? j.items : [];
+        const s = j.summary || {total:0,correct:0,acc_pct:0};
+        document.getElementById('sumTotal').textContent = s.total;
+        document.getElementById('sumCorrect').textContent = s.correct;
+        document.getElementById('sumAcc').textContent = (s.acc_pct||0)+'%';
+
+        if(items.length===0){
+          roundItemRows.innerHTML = `<tr><td colspan="6" class="empty">本回無題目</td></tr>`;
+          return;
+        }
+        function isVideo(url){
+          return /\.(mp4|webm|mov|m4v|avi)$/i.test((url||'').split('?')[0]);
+        }
+
+        roundItemRows.innerHTML = items.map((it, i)=>{
+          let thumbHTML = `<div class="thumb"></div>`;
+          if (it.s_media_url) {
+            if (isVideo(it.s_media_url)) {
+              thumbHTML = `
+                <a class="thumb-wrap" href="${it.s_media_url}" target="_blank" title="在新分頁開啟影片">
+                  <video class="thumb-video" src="${it.s_media_url}#t=0.1" preload="metadata" muted playsinline></video>
+                  <span class="badge">影片</span>
+                  <i class="play"></i>
+                </a>`;
+            } else {
+              thumbHTML = `<a class="thumb-wrap" href="${it.s_media_url}" target="_blank" title="在新分頁開啟圖片">
+                  <img class="thumb-video" src="${it.s_media_url}" alt="">
+                </a>`;
+            }
+          }
+
+          const ok = it.user_answer && it.user_answer.trim() !== '' && it.user_answer.trim() !== '未作答'
+            ? (it.is_correct ? '<b class="ok">正確</b>' : '<b class="no">錯誤</b>')
+            : '<span class="subtle">未作答</span>';
+
+          return `<tr>
+            <td>${i+1}</td>
+            <td>${thumbHTML}</td>
+            <td>${it.s_text || ''}<div class="subtle">分類：${it.category_name || ''}</div></td>
+            <td>${it.user_answer ?? ''}</td>
+            <td>${it.correct_answer ?? ''}</td>
+            <td>${ok}</td>
+          </tr>`;
+        }).join('');
+      })
+      .catch(()=>roundItemRows.innerHTML=`<tr><td colspan="6" class="empty">讀取失敗</td></tr>`);
+  }
+  function closeRound(){ mdlRound.style.display='none'; }
+  kwEl.addEventListener('input', render);
+  load();
+</script>
+</body>
+</html>

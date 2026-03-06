@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no"/>
+<title>小豬跑跑（簡易雙跳版）</title>
+<style>
+  :root { --bg:#b7e6ff; --fg:#1f2937; --ui:#ffffffee; --accent:#ff7eb3; --accent2:#ffd166; --back-top:16px; --back-left:16px; }
+  html,body{margin:0;height:100%;background:var(--bg);font-family:'Microsoft JhengHei',system-ui,sans-serif;overflow:hidden}
+
+  /* 通用返回鈕（固定左上、可自動避位） */
+  #back-button{
+    position: fixed;
+    top: calc(env(safe-area-inset-top, 0px) + var(--back-top));
+    left: calc(env(safe-area-inset-left, 0px) + var(--back-left));
+    z-index: 10000;
+    display:inline-flex;align-items:center;gap:8px;
+    font-size:16px;line-height:1;
+    color:#e11d48;
+    background: rgba(255,255,255,.9);
+    padding:10px 16px;border-radius:24px;text-decoration:none;font-weight:800;
+    box-shadow:0 4px 12px rgba(0,0,0,.18);
+    transition: background-color .2s, transform .06s ease-in-out;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+  #back-button:hover{ background: #fff; }
+  #back-button:active{ transform: scale(.98); }
+
+  #wrap{position:relative;height:100vh;display:flex;align-items:center;justify-content:center}
+  canvas{background:linear-gradient(#b7e6ff 60%,#d8f3ff);border-radius:20px;box-shadow:0 6px 18px #0002;touch-action:manipulation}
+  .hud{position:absolute;top:10px;left:50%;transform:translateX(-50%);display:flex;gap:16px;color:#fff;text-shadow:0 2px 4px #0004;font-weight:700;font-size:18px}
+  .hud span{background:rgba(0,0,0,.25);padding:8px 12px;border-radius:999px}
+  #hint{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.75);color:#fff;padding:14px 20px;border-radius:12px;font-size:18px;text-align:center;min-width:240px}
+  .btnbar{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);display:flex;gap:10px}
+  button{padding:12px 26px;font-size:18px;font-weight:800;background:var(--accent);color:#fff;border:none;border-radius:999px;box-shadow:0 4px 14px #0003;cursor:pointer;transition:.25s}
+  button:hover{filter:brightness(1.05)}
+  #btnRestart{display:none;background:var(--accent2);color:#7c2d12}
+  @media (max-width:640px){canvas{width:92vw;height:56vh}button{padding:12px 22px;font-size:16px}}
+</style>
+</head>
+<body data-logout-url="{{ url_for('auth.logout') }}">
+  <script src="{{ url_for('static', filename='js/parent_timer.js') }}?v=20251025-6"></script>
+<a href="{{ url_for('auth.home') }}" id="back-button" aria-label="返回首頁">← 返回首頁</a>
+
+<div id="wrap">
+  <div class="hud"><span>分數 <b id="score">0</b></span><span>最佳 <b id="best">0</b></span></div>
+  <canvas id="game" width="480" height="480" aria-label="小豬單擊與雙擊跳躍遊戲"></canvas>
+  <div id="hint">點一下跳過低障礙；<br>連點兩下（或空白鍵連按）跳高！</div>
+  <div class="btnbar">
+    <button id="btnJump">跳！</button>
+    <button id="btnRestart">重來</button>
+  </div>
+</div>
+  <!-- 全站倒數提醒容器（60s / 30s / 5s 用） -->
+<div id="sysCenterWarn" class="sysset-center-warn" aria-hidden="true">
+  <div class="sysset-center-box" id="sysCenterWarnBox"></div>
+</div>
+<script>
+/* —— 返回邏輯（同網域上一頁→history.back；否則回首頁） + 自動避位 —— */
+(function(){
+  const backBtn = document.getElementById('back-button');
+  backBtn.addEventListener('click', function(e){
+    try{
+      const ref = document.referrer;
+      if(ref){
+        const r = new URL(ref);
+        if(r.origin === location.origin){
+          e.preventDefault();
+          history.back();
+          return;
+        }
+      }
+    }catch(_e){}
+  });
+  function avoidOverlap(){
+    document.documentElement.style.setProperty('--back-left','16px');
+    document.documentElement.style.setProperty('--back-top','16px');
+    const rect = backBtn.getBoundingClientRect();
+    let step=8, shifted=0, maxShift=240;
+    function covered(){
+      const pts=[[rect.left+4,rect.top+4],[rect.left+rect.width/2,rect.top+rect.height/2]];
+      return pts.some(([x,y])=>{
+        const el = document.elementFromPoint(x,y);
+        return el && el !== backBtn && !backBtn.contains(el) && el !== document.body && el !== document.documentElement;
+      });
+    }
+    while(covered() && shifted<=maxShift){
+      shifted += step;
+      document.documentElement.style.setProperty('--back-left', (16+shifted)+'px');
+      const r2 = backBtn.getBoundingClientRect();
+      rect.left=r2.left; rect.top=r2.top; rect.width=r2.width; rect.height=r2.height;
+    }
+  }
+  window.addEventListener('load', ()=> setTimeout(avoidOverlap, 0));
+  window.addEventListener('resize', ()=> setTimeout(avoidOverlap, 0));
+})();
+
+/* —— 原遊戲 —— */
+(()=>{
+  const cvs=document.getElementById('game'), ctx=cvs.getContext('2d');
+  const scoreEl=document.getElementById('score'), bestEl=document.getElementById('best');
+  const hint=document.getElementById('hint');
+  const btnJump=document.getElementById('btnJump'), btnRestart=document.getElementById('btnRestart');
+
+  const DPR=Math.max(1,Math.min(2,window.devicePixelRatio||1));
+  const W=()=>cvs.width, H=()=>cvs.height;
+  function fit(){const r=cvs.getBoundingClientRect();const w=Math.floor((r.width||cvs.width)*DPR),h=Math.floor((r.height||cvs.height)*DPR);if(w&&h){cvs.width=w;cvs.height=h;}}; fit();
+  addEventListener('resize',fit);
+
+  const groundH=64*DPR;
+  const speedBase=220*DPR;
+  let speed=speedBase;
+  const spawnMin=1.0, spawnMax=1.6;
+
+  const pig={x:0.2*W(),y:0,vy:0,r:22*DPR,gravity:1550*DPR,jumpV:-540*DPR,skinHue:12};
+  const state={run:false,over:false,score:0,best:Number(localStorage.getItem('pig_easy_best')||0),t:0};
+  bestEl.textContent=state.best;
+
+  const MAX_JUMPS=2; let jumpsLeft=MAX_JUMPS; let lastTap=0; const DOUBLE_TAP_MS=260;
+
+  const obstacles=[]; let spawnT=0, nextSpawn=rand(spawnMin,spawnMax);
+
+  function reset(){ state.run=false; state.over=false; state.score=0; state.t=0; speed=speedBase;
+    obstacles.length=0; spawnT=0; nextSpawn=rand(spawnMin,spawnMax);
+    pig.y=H()-groundH-pig.r; pig.vy=0; jumpsLeft=MAX_JUMPS; hint.style.display='block'; btnRestart.style.display='none'; }
+
+  function isOnGround(){ return pig.y>=H()-groundH-pig.r-0.5; }
+
+  function doJump(){ if(state.over) return; if(!state.run){ state.run=true; hint.style.display='none'; }
+    if (jumpsLeft>0){ pig.vy=pig.jumpV; jumpsLeft--; pulse(); }
+  }
+
+  function handleTap(){ const now=performance.now(); if(now-lastTap<DOUBLE_TAP_MS){ doJump(); } else { doJump(); } lastTap=now; }
+
+  function spawn(){
+    const type = Math.random()<0.55? 'low':'high';
+    const w = (type==='low'? 44:54)*DPR;
+    const h = (type==='low'? 36:64)*DPR;
+    obstacles.push({type, x:W()+w, y:H()-groundH-h, w, h, pass:false});
+  }
+
+  function hitCircleRect(cx,cy,cr, rx,ry,rw,rh){ const nx=Math.max(rx,Math.min(cx,rx+rw)); const ny=Math.max(ry,Math.min(cy,ry+rh)); const dx=cx-nx, dy=cy-ny; return (dx*dx+dy*dy)<=cr*cr; }
+
+  let pulseT=0; function pulse(){ pulseT=0.18; }
+
+  let last=0; function loop(ts){ const dt=Math.min(0.033,(ts-last)/1000||0); last=ts; state.t+=dt; ctx.clearRect(0,0,W(),H());
+    drawBG(); drawGround();
+
+    if(!state.run||state.over){ drawObs(); drawPig(); requestAnimationFrame(loop); return; }
+
+    spawnT+=dt; if(spawnT>=nextSpawn){ spawnT=0; nextSpawn=rand(spawnMin,spawnMax); spawn(); }
+
+    pig.vy += pig.gravity*dt; pig.y += pig.vy*dt; if(isOnGround()){ pig.y=H()-groundH-pig.r; pig.vy=0; jumpsLeft=MAX_JUMPS; }
+
+    for(const o of obstacles){ o.x -= speed*dt; if(!o.pass && (o.x+o.w) < (pig.x-pig.r)){ o.pass=true; state.score++; scoreEl.textContent=state.score; }
+      if(hitCircleRect(pig.x,pig.y,pig.r, o.x,o.y,o.w,o.h)) return gameOver(); }
+    while(obstacles.length && obstacles[0].x < -obstacles[0].w-10) obstacles.shift();
+
+    drawObs(); drawPig();
+    requestAnimationFrame(loop);
+  }
+
+  function gameOver(){ if(state.over) return; state.over=true; if(state.score>state.best){ state.best=state.score; localStorage.setItem('pig_easy_best',String(state.best)); } bestEl.textContent=state.best;
+    hint.innerHTML=`💥 遊戲結束！<br>分數 ${state.score}<br><small>點「重來」再玩一次</small>`; hint.style.display='block'; btnRestart.style.display='inline-block'; state.run=false; }
+
+  function drawBG(){ ctx.fillStyle='#a8defc'; ctx.fillRect(0,0,W(),H());
+    ctx.save(); ctx.globalAlpha=.12; ctx.fillStyle='#fff'; const t=state.t*.15; for(let i=0;i<4;i++){ const x=((i*180*DPR) - ((t*110*DPR) % (W()+200*DPR))); cloud(x,110*DPR+(i%2)*60*DPR,40*DPR); } ctx.restore(); }
+  function cloud(x,y,r){ ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.arc(x+r*.9,y+5,r*.8,0,Math.PI*2); ctx.arc(x+r*1.8,y,r*1.1,0,Math.PI*2); ctx.fill(); }
+  function drawGround(){ ctx.fillStyle='#5fc971'; ctx.fillRect(0,H()-groundH,W(),groundH); ctx.strokeStyle='#3d8b4b'; ctx.lineWidth=3*DPR; const off=(state.t*speed*.15)%(22*DPR); for(let x=-off;x<W();x+=22*DPR){ ctx.beginPath(); ctx.moveTo(x,H()-groundH); ctx.lineTo(x+8*DPR,H()-groundH+8*DPR); ctx.stroke(); } }
+
+  function drawPig(){ const {x,y,r,skinHue}=pig; const s = 1 + Math.max(0,pulseT)*0.12; if(pulseT>0) pulseT-=0.016; ctx.save(); ctx.translate(x,y); ctx.scale(s,1/s);
+    ctx.fillStyle=`hsl(${skinHue} 85% 73%)`; ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle=`hsl(${skinHue} 85% 68%)`; ear(-r*.5,-r*.2, r*.5); ear(r*.1,-r*.25, r*.5);
+    ctx.fillStyle='#222'; dot(-r*.28,-r*.12,r*.12); dot(r*.28,-r*.12,r*.12); ctx.fillStyle='#fff'; dot(-r*.32,-r*.16,r*.05); dot(r*.24,-r*.16,r*.05);
+    ctx.fillStyle=`hsl(${skinHue} 85% 60%)`; roundRect(-r*.45, r*.08, r*.9, r*.42, r*.2); ctx.fill();
+    ctx.fillStyle='#7a4050'; dot(-r*.18, r*.26, r*.08); dot(r*.18, r*.26, r*.08);
+    ctx.fillStyle='rgba(255,118,143,.35)'; dot(-r*.55, r*.05, r*.12); dot(r*.55, r*.05, r*.12);
+    ctx.fillStyle='#7a4050'; roundRect(-r*.7, r*.86, r*.34, r*.18, r*.08); ctx.fill(); roundRect(r*.36, r*.86, r*.34, r*.18, r*.08); ctx.fill();
+    ctx.restore();
+    function dot(dx,dy,rr){ ctx.beginPath(); ctx.arc(dx,dy,rr,0,Math.PI*2); ctx.fill(); }
+    function ear(ex,ey,ew){ ctx.beginPath(); ctx.moveTo(ex,ey); ctx.lineTo(ex+ew*.3, ey-ew*.8); ctx.lineTo(ex+ew*.7, ey-ew*.1); ctx.closePath(); ctx.fill(); }
+  }
+
+  function drawObs(){ for(const o of obstacles){ drawObstacle(o); } }
+  function drawObstacle(o){ const grd=ctx.createLinearGradient(0,o.y,0,o.y+o.h); grd.addColorStop(0,'#2ecc71'); grd.addColorStop(1,'#27ae60'); ctx.fillStyle=grd; roundRect(o.x,o.y,o.w,o.h,10*DPR); ctx.fill(); ctx.lineWidth=4*DPR; ctx.strokeStyle='#1e8449'; ctx.stroke();
+    if(o.type==='high'){ ctx.fillStyle='#58d68d'; roundRect(o.x+o.w*.15,o.y-10*DPR,o.w*.7, 12*DPR, 6*DPR); ctx.fill(); }
+  }
+  function roundRect(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+
+  function rand(a,b){ return a + Math.random()*(b-a); }
+
+  cvs.addEventListener('pointerdown', ()=>handleTap());
+  btnJump.addEventListener('click', ()=>handleTap());
+  btnRestart.addEventListener('click', ()=>{ reset(); requestAnimationFrame(loop); });
+  addEventListener('keydown', e=>{ if(e.code==='Space'){ e.preventDefault(); handleTap(); } if(e.code==='KeyR'&&state.over){ reset(); } });
+
+  reset(); requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

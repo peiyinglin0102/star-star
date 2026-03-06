@@ -1,0 +1,25 @@
+# Web / API
+Flask==3.0.0
+Flask-Cors==4.0.0
+gunicorn==21.2.0
+requests==2.32.3
+python-dotenv==1.0.1
+
+# DB
+SQLAlchemy==2.0.29
+PyMySQL==1.1.0
+alembic==1.13.2   #migration
+
+# Auth / Security
+argon2-cffi==23.1.0        # 密碼雜湊（推薦 argon2）
+email-validator==2.1.0.post1
+PyJWT==2.9.0               # 若要做 JWT
+itsdangerous==2.1.2 
+Flask-Mail==0.9.1       # 簡易簽章/一次性 token（Flask 也會依賴）
+#Flask-Mailman==0.3.7        #寄信工具
+Flask-Limiter==3.5.0      #請求頻率限制（防暴力嘗試）
+Werkzeug==3.0.3
+
+
+# 可選：輸入驗證/序列化（想用再開）
+# pydantic==2.7.4
