@@ -17,7 +17,6 @@ typing-extensions==4.5.0
 # 情緒、特徵辨識與影像處理核心
 fer==22.5.1
 mediapipe==0.10.21
-deepface==0.0.83
 opencv-python-headless==4.8.1.78
 Pillow==10.3.0
 
