@@ -1,5 +1,8 @@
 # 🌟 StarStar - 自閉症兒童的情緒辨識訓練系統
 
+使用者登入:https://starlearning.duckdns.org:18361/
+後台管理:https://starlearning.duckdns.org:18361/admin/login
+
 「**自閉症兒童的情緒辨識訓練系統 (Emotion Recognition Training System)**」是一個專為自閉症孩童設計的網頁應用程式。本系統結合豐富的互動式前端介面與後端人工智慧 (AI) 模型，透過情緒教學、互動遊戲、以及即時臉部情緒辨識測驗，協助孩童認識、理解並學習表達各種情緒。
 
 ---
