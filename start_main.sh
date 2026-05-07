@@ -14,10 +14,10 @@ sleep 1
 sudo mkdir -p /var/log/gunicorn
 sudo chmod 777 /var/log/gunicorn
 
-# 4. 關鍵：進入虛擬環境，並直接用 gunicorn 指令 (跟妳手動一模一樣)
+# 4. 關鍵：進入虛擬環境，並直接用 gunicorn 指令
 source /workspaces/main/.venv/bin/activate
 
-# 5. 執行妳「手動成功」的那串指令
+# 5. 執行
 gunicorn -w 4 -k gthread \
   -b 127.0.0.1:5009 \
   --timeout 300 \
